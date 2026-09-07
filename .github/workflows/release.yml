@@ -1,0 +1,28 @@
+name: Build Windows release
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: npm ci
+      - run: npm test
+      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml --features custom-protocol
+      - run: npm run installer:windows
+      - run: python scripts/package-release.py --output ../release-assets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LayerPen-windows-release
+          path: ../release-assets/*
+          if-no-files-found: error

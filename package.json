@@ -1,0 +1,16 @@
+{
+  "name": "layerpen",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.4"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "dev": "cargo run --manifest-path src-tauri/Cargo.toml --features custom-protocol",
+    "build": "cargo build --release --manifest-path src-tauri/Cargo.toml --features custom-protocol",
+    "installer:windows": "tauri build --bundles nsis -- --locked"
+  },
+  "version": "0.1.0",
+  "license": "MIT"
+}

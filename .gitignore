@@ -1,0 +1,11 @@
+src-tauri/target/
+src-tauri/gen/
+node_modules/
+*.log
+__pycache__/
+*.pyc
+# Local pre-release evidence and research remain outside the public repository.
+docs/research/
+docs/assets/
+docs/validation/*
+!docs/validation/0.1.0.ko.md
