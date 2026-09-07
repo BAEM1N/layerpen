@@ -493,10 +493,8 @@ fn main() {
         .setup(|app| {
             let prefs = settings_path(app.handle()).ok().and_then(|p|std::fs::read(p).ok()).and_then(|b|serde_json::from_slice(&b).ok()).unwrap_or_default();
             let mut s = Session::new(prefs);
-            if s.prefs.capture_dir.is_empty() {
-                let root=if let Some(root)=std::env::var_os("MONITOR_INK_DATA_DIR") {std::path::PathBuf::from(root).join("captures")} else {app.path().picture_dir()?.join("MonitorInk")};
-                s.prefs.capture_dir=root.to_string_lossy().into_owned();
-            }
+            let profile = std::env::var_os("MONITOR_INK_DATA_DIR").map(std::path::PathBuf::from);
+            s.prefs.migrate_capture_dir(&app.path().picture_dir()?, profile.as_deref());
             s.displays = displays(app.handle())?;
             if s.prefs.monitor.is_none() {
                 let primary = app.primary_monitor()?;

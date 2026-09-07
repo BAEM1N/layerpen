@@ -16,6 +16,8 @@ with ZipFile(dest, 'w', ZIP_DEFLATED) as archive:
         relative = path.relative_to(root)
         if not path.is_file() or excluded.intersection(relative.parts):
             continue
+        if relative.parts[:2] in {('video', 'out'), ('video', '.cache')}:
+            continue
         if relative.parts[:2] == ('docs', 'validation') and path.name != '0.1.0.ko.md':
             continue
         if relative.parts[:2] == ('docs', 'research') or relative.parts[:2] == ('docs', 'assets'):

@@ -72,7 +72,7 @@ Create a Windows NSIS installer on Windows:
 npm run installer:windows
 ```
 
-The default output is `src-tauri/target/release/bundle/nsis/`. `CARGO_TARGET_DIR` overrides the target directory. The native binary is still named `monitor-ink` for compatibility with existing development scripts; product windows and newly built installers use LayerPen. The legacy application identifier, settings paths, capture folder name, and `MONITOR_INK_DATA_DIR` override are intentionally retained.
+The default output is `src-tauri/target/release/bundle/nsis/`. `CARGO_TARGET_DIR` overrides the target directory. The native binary is still named `monitor-ink` for compatibility with existing development scripts; product windows and newly built installers use LayerPen. The legacy application identifier, settings paths and `MONITOR_INK_DATA_DIR` override are intentionally retained.
 
 ## Repository layout
 

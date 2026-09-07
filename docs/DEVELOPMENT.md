@@ -13,7 +13,7 @@ Coordinates and stroke widths are stored in original-screen space. Convert point
 
 ## Rebrand compatibility
 
-LayerPen 0.1.0 changes the displayed product name and organizes documentation. The Rust package/binary `monitor-ink`, identifier `dev.personal.monitorink`, capture folder `MonitorInk`, and `MONITOR_INK_DATA_DIR` remain for compatibility. Do not rename data paths without a migration plan. An old Monitor Ink installer entry may coexist with a newly named LayerPen entry.
+LayerPen 0.1.0 changes the displayed product name and organizes documentation. The Rust package/binary `monitor-ink`, identifier `dev.personal.monitorink`, and `MONITOR_INK_DATA_DIR` remain for compatibility. Captures default to Pictures/LayerPen; the exact previous default Pictures/MonitorInk is migrated in preferences without moving files. Custom folders remain unchanged. An old Monitor Ink installer entry may coexist with a newly named LayerPen entry.
 
 ## Release checks
 

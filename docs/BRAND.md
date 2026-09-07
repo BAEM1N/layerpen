@@ -6,4 +6,4 @@ The name combines the annotation layer above other applications with a pen. Use 
 
 The selected domain is `layerpen.app`. Registration availability was checked on September 7, 2026; the domain has not been purchased or connected yet.
 
-Legacy internal identifiers and the MonitorInk data directory remain unchanged to preserve local preferences and compatibility.
+Legacy internal identifiers and the application settings directory remain unchanged to preserve local preferences and compatibility. New captures use Pictures/LayerPen.

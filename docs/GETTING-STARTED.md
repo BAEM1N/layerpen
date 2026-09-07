@@ -39,7 +39,7 @@ An application-window or browser-tab share may not contain the overlay. No meeti
 
 PNG defaults to screen plus annotations. Enable ink-only capture for a transparent background. GIF export replays the drawing sequence over a static background, not a screen recording. Export before exiting: sessions are not automatically restored.
 
-The default capture folder remains Pictures/MonitorInk for compatibility. Change it in Settings. The portable and installed editions share settings unless `MONITOR_INK_DATA_DIR` points to a separate profile.
+The default capture folder is Pictures/LayerPen. Existing settings using Pictures/MonitorInk switch to the new folder; existing files stay in the old folder. Custom folders are preserved. Change the folder in Settings. The portable and installed editions share settings unless `MONITOR_INK_DATA_DIR` points to a separate profile.
 
 ## Uninstall
 

@@ -431,6 +431,20 @@ impl Default for Preferences {
     }
 }
 impl Preferences {
+    pub fn migrate_capture_dir(&mut self, pictures: &std::path::Path, profile: Option<&std::path::Path>) {
+        if self.capture_dir.is_empty() {
+            let root = profile.map(|p| p.join("captures")).unwrap_or_else(|| pictures.join("LayerPen"));
+            self.capture_dir = root.to_string_lossy().into_owned();
+            return;
+        }
+        let old = pictures.join("MonitorInk");
+        let same = std::path::Path::new(&self.capture_dir) == old;
+        #[cfg(target_os = "windows")]
+        let same = same || self.capture_dir.replace('/', "\\").trim_end_matches('\\').eq_ignore_ascii_case(&old.to_string_lossy());
+        if same {
+            self.capture_dir = pictures.join("LayerPen").to_string_lossy().into_owned();
+        }
+    }
     pub fn valid(&self) -> bool {
         matches!(self.language.as_str(), "auto" | "ko" | "en" | "ja" | "zh-CN")
             && (1..=10).contains(&self.fade_seconds)
@@ -611,6 +625,23 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn capture_folder_migration_preserves_custom_paths() {
+        let pictures = std::path::Path::new("/users/example/Pictures");
+        let mut p = super::Preferences::default();
+        p.migrate_capture_dir(pictures, None);
+        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("LayerPen"));
+        p.capture_dir = pictures.join("MonitorInk").to_string_lossy().into_owned();
+        p.migrate_capture_dir(pictures, None);
+        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("LayerPen"));
+        p.capture_dir = pictures.join("Meetings").to_string_lossy().into_owned();
+        let custom = p.capture_dir.clone();
+        p.migrate_capture_dir(pictures, None);
+        assert_eq!(p.capture_dir, custom);
+        p.capture_dir.clear();
+        p.migrate_capture_dir(pictures, Some(std::path::Path::new("/test/profile")));
+        assert_eq!(std::path::Path::new(&p.capture_dir), std::path::Path::new("/test/profile/captures"));
+    }
     use super::*;
     fn stroke() -> Stroke {
         Stroke {
