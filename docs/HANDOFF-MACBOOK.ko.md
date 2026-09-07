@@ -42,6 +42,8 @@ npm run render
 
 ## 유지해야 할 동작
 
+추가 검토: [로컬 STT 실시간 자막 제안](LIVE-CAPTIONS-PROPOSAL.ko.md). 아직 구현하거나 모델을 실행하지 않았으며, whisper.cpp 다국어 base 양자화와 sherpa-onnx 후보를 실제 Windows/Mac 음성에서 비교하는 단계부터 시작합니다.
+
 - UI: 한국어·영어·일본어·중국어 간체, 시스템 언어 자동 선택과 영어 fallback.
 - 신규 기본 캡처 폴더: Pictures/LayerPen. 기존 기본 Pictures/MonitorInk 설정은 새 경로로 전환하되 파일은 이동하지 않습니다. 직접 지정한 다른 폴더는 유지합니다.
 - Rust 패키지/내부 실행 파일 `monitor-ink`, 앱 식별자 `dev.personal.monitorink`, 설정 디렉터리 및 `MONITOR_INK_DATA_DIR` 환경변수는 호환성을 위해 유지합니다.
