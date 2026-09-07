@@ -34,6 +34,8 @@ The UI supports **English, 한국어, 日本語, and 简体中文**. Choose a la
 
 ## Get started
 
+Watch the [36-second product introduction](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/LayerPen-intro-v0.1.0.mp4). Its editable [Remotion source](video/README.md) and [MacBook handoff guide](docs/HANDOFF-MACBOOK.ko.md) are included.
+
 Download the [Windows installer](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/LayerPen_0.1.0_x64-setup.exe) or [portable ZIP](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/LayerPen-0.1.0-windows-x64-portable.zip) from [GitHub Releases](https://github.com/BAEM1N/layerpen/releases). The portable edition contains `LayerPen.exe`; no build tools are needed. Close older copies before launching.
 
 This is **v0.1.0, the first public release**. Earlier local development builds used a separate version sequence.
@@ -97,3 +99,4 @@ Useful contributions include screen-sharing verification, mixed-DPI monitor test
 ## License
 
 Project-authored code is available under the [MIT license](LICENSE), including use at work. Dependencies retain their own licenses; see [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt). License texts missing from cached crates are supplied with [source provenance](docs/dependency-licenses/sources.json). Unmodified MPL-2.0 dependency sources are included in [third-party-sources.zip](third-party-sources.zip), also bundled with the installer and portable edition.
+
