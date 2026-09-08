@@ -249,5 +249,7 @@
   "2줄": "2 lines",
   "3줄": "3 lines",
   "TTF 파일 추가": "Add TTF file",
-  "시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다.": "Choose an installed font or add a TTF file. Added files are copied into the app and kept for next time."
+  "시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다.": "Choose an installed font or add a TTF file. Added files are copied into the app and kept for next time.",
+  "텍스트 글꼴": "Text font",
+  "시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다. 글자 크기는 펜 굵기 5단계에 따라 16·24·40·72·104px입니다. 입력 중 Enter는 완료, Shift+Enter는 줄바꿈, Escape는 취소입니다.": "Choose a system font or add a TTF file. Imported files are copied into the app and kept for next time. The five pen sizes produce 16, 24, 40, 72 and 104px text. Enter finishes, Shift+Enter adds a new line, and Escape cancels."
 }

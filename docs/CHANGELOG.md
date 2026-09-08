@@ -24,3 +24,11 @@
 - Windows x64 installer and portable ZIP; source and dependency notices included.
 
 Public version numbering starts at 0.1.0. Previous local prototypes used an internal version sequence. Legacy settings paths remain compatible. macOS/Linux binaries and meeting-service compatibility have not been validated.
+
+## v0.1.0 documentation and classroom update — 2026-09-09
+
+- English/Korean open-source README and 11 illustrated guides per language.
+- Binary-focused release assets; previous MP4 withdrawn.
+- Experimental local classroom server: selected-file downloads, random URL/QR, separate opt-in live monitor view.
+- Cursor spotlight, configurable radius/dimming, Windows circular live magnification.
+- Actual classroom network, native spotlight, macOS/Linux runtime validation remains pending.

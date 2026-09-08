@@ -24,11 +24,9 @@ with ZipFile(out/f'OnPen-{version}-windows-x64-portable.zip','w',ZIP_DEFLATED) a
  for name,path in resources.items():z.write(path,'OnPen/'+name)
  for path in (root/'stt').glob('*'):
   if path.suffix in {'.py','.txt','.ps1'} and not path.name.startswith(('test_','benchmark')):z.write(path,'OnPen/stt/'+path.name)
-source=out/f'OnPen-{version}-source.zip'
-subprocess.run([sys.executable,str(root/'scripts/package-source.py'),str(source)],check=True)
-shutil.copy2(root/'third-party-sources.zip',out/'third-party-sources.zip')
-for f in out.glob('*.zip'):
- with ZipFile(f) as z:assert z.testzip() is None
-files=sorted(f for f in out.iterdir() if f.is_file() and f.name!='SHA256SUMS.txt')
+files=[out/setup.name,out/f'OnPen-{version}-windows-x64-portable.zip']
+for f in files:
+ if f.suffix=='.zip':
+  with ZipFile(f) as z:assert z.testzip() is None
 (out/'SHA256SUMS.txt').write_text(''.join(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+f.name+'\n' for f in files),encoding='utf-8')
 for f in files:print(f'{f.name}: {f.stat().st_size:,} bytes')

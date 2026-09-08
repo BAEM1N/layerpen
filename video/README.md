@@ -1,5 +1,7 @@
 # OnPen product introduction
 
+**Archived draft.** The rendered MP4 was withdrawn from the public v0.1 release and root README on 2026-09-09. This source is retained for redesign; it is not the current product demonstration. Research and a new storyboard come before rendering a replacement.
+
 36 seconds, 1920 × 1080, 30 fps, H.264 MP4. English on-screen copy, no music or voiceover. Settings, drawing and zoom scenes are product illustrations; they are not screen recordings. No confidential screen captures or external stock assets are used.
 
 ## Edit on macOS or Windows

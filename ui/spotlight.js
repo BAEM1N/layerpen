@@ -1,0 +1,4 @@
+const shade=document.getElementById('shade'),lens=document.getElementById('lens');
+function render(s){shade.hidden=!s.inside;shade.style.background=`radial-gradient(circle ${s.radius}px at ${s.x}px ${s.y}px, transparent calc(100% - 1px), rgba(0,0,0,${s.dim}) 100%)`;lens.hidden=s.scale<=1||!s.inside;Object.assign(lens.style,{left:s.x-s.radius+'px',top:s.y-s.radius+'px',width:s.radius*2+'px',height:s.radius*2+'px'});if(s.image)lens.src=s.image;}
+if(window.__TAURI__)await window.__TAURI__.event.listen('spotlight-frame',event=>render(event.payload));
+else if(new URLSearchParams(location.search).has('preview')){document.addEventListener('pointermove',e=>render({x:e.clientX,y:e.clientY,radius:120,dim:.65,scale:1,inside:true}));document.body.style.pointerEvents='auto';render({x:360,y:280,radius:120,dim:.65,scale:1,inside:true});}

@@ -31,11 +31,12 @@ let zoomRegion=null,zoomImage=null,zoomImageId=null,zoomLoadingId=null;
 const inputPoint=e=>sourcePoint(e.clientX,e.clientY,innerWidth,innerHeight,activeZoom(state));
 const widths=[2,4,8,16,24];
 const widthNames=['아주 가늘게','가늘게','보통','굵게','아주 굵게'];
-const defaults={language:'auto',theme:'blue',text_font:'Malgun Gothic',fade_seconds:3,layout:'horizontal',toolbar_lines:2,pen_width:4,marker_width:16,eraser_width:24,marker_opacity:0.3,shortcut:'CommandOrControl+Shift+D',capture_dir:'',capture_layer_only:false,gif_speed:1,gif_background:'white',gif_repeat:true,tool_shortcuts:true,keybindings:defaultBindings,global_shortcut_enabled:true,palette:['#8b5cf6','#f43f5e','#fbbf24','#38bdf8','#f8fafc']};
+const defaults={language:'auto',theme:'blue',text_font:'Malgun Gothic',fade_seconds:3,spotlight_radius:120,spotlight_dim:.65,spotlight_scale:2,layout:'horizontal',toolbar_lines:2,pen_width:4,marker_width:16,eraser_width:24,marker_opacity:0.3,shortcut:'CommandOrControl+Shift+D',capture_dir:'',capture_layer_only:false,gif_speed:1,gif_background:'white',gif_repeat:true,tool_shortcuts:true,keybindings:defaultBindings,global_shortcut_enabled:true,palette:['#8b5cf6','#f43f5e','#fbbf24','#38bdf8','#f8fafc']};
 const preferences=()=>({...defaults,...state?.preferences});
 const shortcutLabel=value=>value.replace('CommandOrControl',/Mac/.test(navigator.platform)?'⌘':'Ctrl').replace('Shift','⇧').replaceAll('+',' ');
 function sizes(name,value){return `<div class="size-choices" data-size-group="${name}">${widths.map((w,i)=>`<button type="button" class="size-choice ${value===w?'selected':''}" data-size="${w}" title="${widthNames[i]}" aria-label="${widthNames[i]}" aria-pressed="${value===w}"><span style="--dot:${Math.max(3,w*.65)}px"></span></button>`).join('')}</div>`;}
 const icons = {
+  spotlight:'<circle cx="12" cy="12" r="5"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/>',
   text:'<path d="M4 4h16M12 4v17M8 21h8M4 4v4m16-4v4"/>',
   zoom:'<circle cx="10" cy="10" r="7"/><path d="m15 15 7 7M6 10h8m-4-4v8"/>',
   zoomReset:'<circle cx="10" cy="10" r="7"/><path d="m15 15 7 7M6 10h8"/>',
@@ -121,9 +122,10 @@ function mountToolbar() {
     <div class="palette">${defaults.palette.map((c,i)=>`<button class="swatch" data-slot="${i}" data-color="${c}" style="--swatch:${c}" title="색상 ${c}" aria-label="색상 ${c}"></button>`).join('')}<label class="custom-color" title="자유색"><input type="color" id="customColor" aria-label="자유색" value="#8b5cf6"></label></div>
     <div class="history-group">${button('undo','실행 취소','data-action="undo" id="undo"')}${button('redo','다시 실행','data-action="redo" id="redo"')}</div>
     <div class="utility-group">${button('trash','현재 화면 필기 전체 지우기','id="clear"')}${button('settings','설정','data-action="settings"')}</div>
-    <div class="export-tools"><button type="button" id="captionOpen" title="실시간 자막" aria-label="실시간 자막">CC</button>${button('camera','스크린샷 캡처','id="capture"')}${button('gif','GIF 내보내기','id="gifExport"')}${button('close','앱 종료','data-action="quit" class="quit-app"')}</div>
+    <div class="export-tools">${button('spotlight','스포트라이트 · Spotlight','id="spotlightToggle"')}<button type="button" id="captionOpen" title="실시간 자막" aria-label="실시간 자막">CC</button>${button('camera','스크린샷 캡처','id="capture"')}${button('gif','GIF 내보내기','id="gifExport"')}${button('close','앱 종료','data-action="quit" class="quit-app"')}</div>
     </div><div class="toolbar-caption"><span id="modeLabel"></span><span id="toolbarShortcut"></span></div>`;
   root.querySelector('.grip').addEventListener('pointerdown', () => { if(native) native.window.getCurrentWindow().startDragging().catch(error); });
+  root.querySelector('#spotlightToggle').onclick=()=>run('spotlight_toggle');
   root.querySelector('#captionOpen').onclick=()=>run('caption_open');
   root.querySelector('#mode').onclick = () => run('action',{name:'mouse'});
   root.querySelector('#zoomReset').onclick=()=>run('action',{name:'zoom_reset'});
@@ -197,6 +199,7 @@ function mountSettings() {
   <section class="preference-section"><h2>스크린샷</h2><label class="check-row"><input type="checkbox" id="layerOnly"> 필기 레이어만 캡처</label><p class="hint">기본값은 선택한 화면 + 필기입니다. 레이어만 저장하면 배경이 투명한 PNG가 만들어집니다.</p><label class="field-label" for="captureDir">기본 저장 위치</label><div class="folder-row"><input id="captureDir" readonly aria-label="기본 저장 위치"><button class="outline" id="chooseFolder">폴더 선택</button></div><p class="hint">파일명은 날짜·시간으로 자동 생성됩니다.<br><span id="filenameSample"></span></p><button class="outline" id="captureNow">${icon('camera')} 지금 캡처</button><p class="hint" id="lastCapture" role="status"></p></section>
   <section class="preference-section"><h2>부분 확대 + 판서</h2><p class="hint">돋보기로 영역을 드래그하면 현재 화면을 멈춰 최대 x6까지 확대합니다. 클릭만 하면 x2로 확대합니다. 확대 종료 버튼 또는 마우스 모드로 원래 화면에 돌아갑니다.</p><p class="hint">선택한 굵기는 확대 화면에서 보이는 굵기입니다. x2에서 굵기 8로 그리면 원래 화면에는 굵기 4로 남습니다. PNG는 현재 확대 영역을, GIF는 원래 화면 좌표 전체를 사용합니다. 화면 이동·동영상은 확대 중 갱신되지 않습니다.</p></section>
   <section class="preference-section"><h2>보드와 강조</h2><div class="setting-row"><span>판서 배경</span><div class="segmented"><button data-board="screen">화면</button><button data-board="white">화이트</button><button data-board="black">블랙</button></div></div><p class="hint">배경을 바꿔도 판서는 유지됩니다. 마우스 모드에서는 보드 배경을 내리고, 다시 필기하면 복원합니다.</p><div class="setting-row"><label for="fadeSeconds">강조 잉크 유지 시간</label><select id="fadeSeconds">${[1,2,3,5,10].map(n=>`<option value="${n}">${n}초</option>`).join('')}</select></div><p class="hint">펜을 뗀 뒤 지정한 시간 동안 보이다가 사라집니다. 일반 판서의 선택·실행 취소와 분리하며, GIF에는 강조와 사라지는 과정이 포함됩니다.</p></section>
+  <section class="preference-section"><h2>스포트라이트 · Spotlight</h2><button class="outline" id="spotlightToggle">켜기 / 끄기 · Toggle spotlight</button><label>원 반경 · Radius <input id="spotRadius" type="range" min="40" max="300" step="10"></label><label>바깥 어둡기 · Dimming <input id="spotDim" type="range" min="10" max="90" step="5"></label><label>원 안 확대 · Magnification <select id="spotScale"><option value="1">1× · 강조만 / Highlight only</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="3">3×</option></select></label><p class="hint">커서를 따라가며 클릭은 아래 앱으로 전달됩니다(마우스 모드). 원 안 실시간 확대는 Windows에서 제공합니다. Mac/Linux는 밝기 강조만 제공하며 네이티브 검증이 필요합니다. 도구막대의 스포트라이트 버튼으로 끕니다.<br>Follows the cursor; clicks pass through in mouse mode. Live magnification is Windows-only. Mac/Linux use highlighting only and need native validation. Toggle off from the toolbar.</p></section>
   <section class="preference-section"><h2>GIF 내보내기</h2><p class="hint">모두 지우기 이후의 필기·이동·크기 변경·삭제를 재생합니다. 모니터별로 기록하며 앱 종료 시 기록은 사라집니다. 긴 변 최대 960px, 기본 10fps. 긴 기록은 프레임 간격을 조정합니다.</p><div class="setting-row"><label for="gifSpeed">재생 속도</label><select id="gifSpeed">${[0.5,1,2,4].map(v=>`<option value="${v}">x${v}</option>`).join('')}</select></div><div class="setting-row"><label for="gifBackground">배경</label><select id="gifBackground"><option value="screen">현재 화면 / 보드 + 판서</option><option value="white">흰색</option><option value="dark">어두운색</option><option value="transparent">투명 (형광펜 반투명 제한)</option></select></div><label class="check-row"><input type="checkbox" id="gifRepeat"> 반복 재생</label><p class="hint">스크린샷과 같은 폴더에 날짜·시간.gif로 저장합니다. 현재 화면 + 판서를 선택하면 내보내기 시점의 화면을 정지 배경으로 사용합니다. 도구막대·기존 판서는 배경 캡처에서 제외합니다. 화면 동영상은 녹화하지 않습니다.</p><button class="outline" id="gifExport">${icon('gif')} GIF 내보내기</button><p class="hint" id="gifProgress" role="status"></p></section>
   <section class="preference-section"><h2>단축키</h2>
   <p class="hint">키 칸을 클릭한 뒤 원하는 키 조합을 누르세요. Escape는 입력 취소입니다. 켜진 항목끼리 같은 키를 사용할 수 없습니다.</p>
@@ -214,6 +217,9 @@ function mountSettings() {
   captionEntry.type='button';captionEntry.className='outline';captionEntry.textContent='CC · Live captions · 실시간 자막';
   captionEntry.onclick=()=>run('caption_open');
   root.querySelector('.language-setting').after(captionEntry);
+  const shareEntry=document.createElement('button');
+  shareEntry.type='button';shareEntry.className='outline';shareEntry.textContent='자료 공유 · Share materials';
+  shareEntry.onclick=()=>run('share_open');captionEntry.after(shareEntry);
   root.querySelector('#closeSettings').onclick=()=>run('action',{name:'settings'});
   root.querySelector('#identify').onclick=()=>run('identify');
   root.querySelector('#quit').onclick=()=>run('action',{name:'quit'});
@@ -227,6 +233,10 @@ function mountSettings() {
   root.querySelectorAll('[data-preset]').forEach(el=>el.onchange=()=>{const palette=[...preferences().palette];palette[Number(el.dataset.preset)]=el.value;update({palette});});
   root.querySelectorAll('[data-layout]').forEach(el=>el.onclick=()=>update({layout:el.dataset.layout}));
   root.querySelectorAll('[data-size-group]').forEach(group=>group.querySelectorAll('[data-size]').forEach(el=>el.onclick=()=>update({[group.dataset.sizeGroup]:Number(el.dataset.size)})));
+  root.querySelector('#spotlightToggle').onclick=()=>run('spotlight_toggle');
+  root.querySelector('#spotRadius').onchange=e=>update({spotlight_radius:Number(e.target.value)});
+  root.querySelector('#spotDim').onchange=e=>update({spotlight_dim:Number(e.target.value)/100});
+  root.querySelector('#spotScale').onchange=e=>update({spotlight_scale:Number(e.target.value)});
   root.querySelector('#fadeSeconds').onchange=e=>update({fade_seconds:Number(e.target.value)});
   root.querySelectorAll('[data-board]').forEach(el=>el.onclick=()=>run('action',{name:'board_'+el.dataset.board}));
   root.querySelector('#gifSpeed').onchange=e=>update({gif_speed:Number(e.target.value)});
@@ -257,6 +267,7 @@ async function refreshFonts(){try{const {system,assets}=await fontChoices();cons
 let monitorSignature = '';
 function updateSettings() {
   const p=preferences();
+  root.querySelector('#spotRadius').value=p.spotlight_radius;root.querySelector('#spotDim').value=p.spotlight_dim*100;root.querySelector('#spotScale').value=p.spotlight_scale;
   root.querySelector('#language').value=p.language;
   root.querySelectorAll('[data-lines]').forEach(el=>{el.classList.toggle('active',Number(el.dataset.lines)===p.toolbar_lines);el.setAttribute('aria-pressed',String(Number(el.dataset.lines)===p.toolbar_lines));});
   root.querySelector('#theme').value=p.theme;

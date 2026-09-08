@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod animation;
+mod sharing;
+mod spotlight;
 mod docking;
 mod fonts;
 mod captions;
@@ -508,7 +510,7 @@ fn main() {
                 if let Ok(mut s) = state.lock() { let enabled = !s.drawing; if let Err(e) = drawing(app,&mut s,enabled) { s.warning = Some(e); } let _ = publish(app,&s); };
             }
         }).build())
-        .invoke_handler(tauri::generate_handler![fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
+        .invoke_handler(tauri::generate_handler![spotlight::spotlight_toggle,spotlight::spotlight_status,sharing::share_live,sharing::share_open,sharing::share_status,sharing::share_start,sharing::share_stop,sharing::share_add,sharing::share_remove,fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
         .setup(|app| {
             let prefs = settings_path(app.handle()).ok().and_then(|p|std::fs::read(p).ok()).or_else(||{
                 if std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")).is_some(){return None;}
@@ -527,6 +529,8 @@ fn main() {
             app.manage(Mutex::new(s));
             app.manage(animation::ExportState::default());
             app.manage(captions::CaptionState::default());
+            app.manage(sharing::ShareState::default());
+            app.manage(spotlight::SpotlightState::default());
             let overlay = WebviewWindowBuilder::new(app,"overlay",WebviewUrl::App("index.html?view=overlay".into()))
                 .data_directory(webview_data(app.handle())?)
                 .title("OnPen · 필기").decorations(false).transparent(true).shadow(false).always_on_top(true)

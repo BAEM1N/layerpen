@@ -6,7 +6,8 @@
     "caption-settings",
     "captions",
     "overlay",
-    "identify-*"
+    "identify-*",
+    "spotlight"
   ],
   "permissions": [
     "core:event:allow-listen",

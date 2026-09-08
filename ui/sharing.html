@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OnPen · Share materials</title><link rel="stylesheet" href="captions.css"><style>input{width:100%;box-sizing:border-box}#qr img{width:190px;height:190px}li{margin:12px 0;overflow-wrap:anywhere}li button{margin-left:12px}#status{font-weight:700}#url{font-size:13px}small{color:#879ab7}</style></head>
+<body><main><header><div><h1>자료 공유 · Share materials</h1><p>같은 네트워크에서 브라우저로 · Open in a browser on the same network</p></div></header>
+<p>자료는 선택한 파일만 공개합니다. 화면은 아래에서 별도로 켭니다.<br>Only selected files are shared. Enable live view separately below.</p>
+<button id="add">자료 추가 · Add files</button><ul id="files"></ul>
+<label>강사 PC의 LAN IPv4 · This PC's LAN IPv4<input id="address" spellcheck="false" placeholder="192.168.1.10"></label>
+<p class="hint">자동 주소가 VPN 등으로 다르면 Wi-Fi/이더넷의 IPv4 주소를 입력하세요.<br>If the detected address uses a VPN, enter your Wi-Fi or Ethernet IPv4 address.</p>
+<button id="toggle">공유 시작 · Start sharing</button><p id="status" role="status">꺼짐 · Off</p>
+<section><h2>실시간 화면 · Live view</h2><p>켜면 선택한 모니터 전체(필기, 열린 창, 알림 포함)가 전송됩니다. 자료만 공유하려면 꺼두세요.<br>When enabled, the entire selected monitor—including ink, open windows and notifications—is sent. Leave off for files only.</p><button id="liveToggle" disabled>화면 공유 시작 · Start live view</button><p id="liveStatus" role="status">꺼짐 · Off</p><small>최대 1280×720, 약 2 fps, 음성 제외 · Up to 1280×720, approximately 2 fps, no audio</small></section>
+<section id="connection" hidden><label>수강생 접속 주소 · Student URL<input id="url" readonly></label><button id="copy">주소 복사 · Copy URL</button><div id="qr"></div><p>주소나 QR을 받은 사람이 파일을 받을 수 있습니다. 중지 후 재시작하면 주소가 바뀝니다.<br>Anyone with this URL can download. Restart sharing to rotate the link.</p></section>
+<p class="hint">신뢰하는 수업 네트워크에서 사용하세요. HTTP 연결이며 암호화되지 않습니다. Windows 방화벽은 필요한 사설 네트워크만 허용하세요. 학교 Wi-Fi의 기기 간 차단은 관리자의 설정 변경이 필요할 수 있습니다.<br>Use a trusted classroom network. HTTP is unencrypted. Allow the app on the required private network only. School Wi-Fi client isolation may prevent connections.</p>
+<p class="hint">창을 닫아도 공유는 유지됩니다. 공유 중지 또는 앱 종료 시 접속이 끝납니다. 다운로드한 파일은 회수되지 않습니다.<br>Closing this panel keeps sharing on. Stop sharing or quit OnPen to disconnect. Downloaded copies cannot be revoked.</p>
+<p id="error" role="alert"></p></main><script type="module" src="sharing.js"></script></body></html>

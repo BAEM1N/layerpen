@@ -452,6 +452,9 @@ pub struct Preferences {
     pub keybindings: std::collections::BTreeMap<String, KeyBinding>,
     pub global_shortcut_enabled: bool,
     pub fade_seconds: u64,
+    pub spotlight_radius:f64,
+    pub spotlight_dim:f64,
+    pub spotlight_scale:f64,
 }
 impl Default for Preferences {
     fn default() -> Self {
@@ -476,6 +479,7 @@ impl Default for Preferences {
             keybindings: default_bindings(),
             global_shortcut_enabled: true,
             fade_seconds: 3,
+            spotlight_radius:120.,spotlight_dim:0.65,spotlight_scale:2.,
             palette: ["#8b5cf6", "#f43f5e", "#fbbf24", "#38bdf8", "#f8fafc"].map(String::from),
         }
     }
@@ -503,6 +507,9 @@ impl Preferences {
             && matches!(self.theme.as_str(), "blue" | "teal" | "green" | "orange" | "purple")
             && valid_font(&self.text_font)
             && (1..=10).contains(&self.fade_seconds)
+            && self.spotlight_radius.is_finite() && (40.0..=300.0).contains(&self.spotlight_radius)
+            && self.spotlight_dim.is_finite() && (0.1..=0.9).contains(&self.spotlight_dim)
+            && [1.,1.5,2.,3.].contains(&self.spotlight_scale)
             && [0.5, 1., 2., 4.].contains(&self.gif_speed)
             && matches!(
                 self.gif_background.as_str(),
