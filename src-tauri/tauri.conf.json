@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "LayerPen",
+  "productName": "OnPen",
   "version": "0.1.0",
   "identifier": "dev.personal.monitorink",
   "build": {
@@ -21,7 +21,8 @@
     ],
     "icon": [
       "icons/icon.ico",
-      "icons/icon.png"
+      "icons/icon.png",
+      "icons/icon.icns"
     ],
     "resources": {
       "../docs/GETTING-STARTED.md": "GETTING-STARTED.md",
@@ -31,7 +32,13 @@
       "../docs/USER-GUIDE.ko.md": "USER-GUIDE.ko.md",
       "../third-party-sources.zip": "third-party-sources.zip",
       "../docs/README.ja.md": "README.ja.md",
-      "../docs/README.zh-CN.md": "README.zh-CN.md"
+      "../docs/README.zh-CN.md": "README.zh-CN.md",
+      "../docs/STT-SETUP.md": "STT-SETUP.md",
+      "../stt/worker.py": "stt/worker.py",
+      "../stt/providers.py": "stt/providers.py",
+      "../stt/acceleration.py": "stt/acceleration.py",
+      "../stt/requirements.txt": "stt/requirements.txt",
+      "../stt/setup-windows.ps1": "stt/setup-windows.ps1"
     },
     "shortDescription": "Draw over your screen. Keep the conversation moving.",
     "windows": {

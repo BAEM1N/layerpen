@@ -1,6 +1,6 @@
 # Localization
 
-LayerPen supports Korean (`ko`), English (`en`), Japanese (`ja`), and Simplified Chinese (`zh-CN`). Settings → Language updates all open application windows and persists the choice. System language is the default; unsupported languages fall back to English. Chinese regional variants currently use Simplified Chinese.
+OnPen supports Korean (`ko`), English (`en`), Japanese (`ja`), and Simplified Chinese (`zh-CN`). Settings → Language updates all open application windows and persists the choice. System language is the default; unsupported languages fall back to English. Chinese regional variants currently use Simplified Chinese.
 
 `ui/locales/*.json` contains matching message keys. Existing Korean source messages serve as IDs for both UI strings and application-owned native errors. Placeholders such as `{value}` and `{e}` must remain intact. External diagnostics and user paths are not translated. `ui/i18n.js` translates text nodes and accessibility attributes without changing HTML or event handlers, and retains each node's source text for reversible language changes.
 

@@ -1,6 +1,6 @@
-# LayerPen product introduction
+# OnPen product introduction
 
-36 seconds, 1920 × 1080, 30 fps, H.264 MP4. English on-screen copy, no music or voiceover. The settings images are actual LayerPen preview UI; drawing and zoom sequences are clearly labeled illustrations. No confidential screen captures or external stock assets are used.
+36 seconds, 1920 × 1080, 30 fps, H.264 MP4. English on-screen copy, no music or voiceover. Settings, drawing and zoom scenes are product illustrations; they are not screen recordings. No confidential screen captures or external stock assets are used.
 
 ## Edit on macOS or Windows
 
@@ -19,7 +19,7 @@ npm run stills
 npm run render
 ```
 
-The output is `out/LayerPen-intro-v0.1.0.mp4`. Remotion can download its supported browser automatically. To use an installed Chrome instead, set `REMOTION_BROWSER_EXECUTABLE` to its full executable path. On macOS that is usually `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`.
+The output is `out/OnPen-intro-v0.1.0.mp4`. Remotion can download its supported browser automatically. To use an installed Chrome instead, set `REMOTION_BROWSER_EXECUTABLE` to its full executable path. On macOS that is usually `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`.
 
 The app itself does not depend on Remotion. Remotion has its own license, separate from this project's MIT license; see https://www.remotion.dev/license. Rendering does not publish the video or use a paid cloud renderer.
 

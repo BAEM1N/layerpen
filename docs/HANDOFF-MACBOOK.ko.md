@@ -1,12 +1,39 @@
-# 맥북 인계 — LayerPen
+# OnPen v0.2 Mac 검증 준비
+
+현재 Windows v0.1 갱신: 테마 5종, 텍스트, 도킹 설정, 실시간 자막 실험 기능. Mac에서 빌드가 통과해도 화면 필기·마이크·GPU/ANE 실행은 별도 검증해야 합니다.
+
+## SSH로 준비할 것
+- Mac 주소(IP 또는 VPN 호스트), 사용자명, 포트(기본 22), 작업할 폴더.
+- 시스템 설정 → 일반 → 공유 → 원격 로그인에서 작업 계정만 허용.
+- 작업용 SSH 공개키를 Mac 계정의 authorized_keys에 등록. 개인키/비밀번호를 채팅에 붙이지 않습니다.
+- 접속 가능한 네트워크, 전원 연결, 로그인된 데스크톱 세션.
+
+SSH로 소스 수정·빌드·자동 테스트는 가능하지만 GUI 실행 확인에는 실제 로그인 세션과 사용자 승인, 필요시 원격 화면 공유가 필요합니다. Mac에서 실행하거나 화면을 직접 확인하며 진행하는 방식도 가능합니다. 화면 및 시스템 오디오 기록, 마이크, 필요시 손쉬운 사용/입력 모니터링 권한은 해당 기능에서 요청할 때 사용자가 승인합니다. 전체 디스크 접근은 기본 요구사항이 아닙니다.
+
+Xcode Command Line Tools, Rust, Node, Python 환경은 접속 후 확인하고 준비합니다. Apple ID/개발자 인증서는 로컬 기능 검증을 시작하는 데 필요하지 않습니다. 서명·공증·스토어 제출은 별도 배포 단계입니다.
+
+## v0.2 실제 검증
+- Retina/다중 모니터/음수 좌표, 툴바 이동과 설정 도킹, 화면 캡처 권한.
+- 한글 IME·글꼴·텍스트 크기, 전역 단축키·클릭 통과, 전체화면 앱과 Spaces.
+- 마이크 선택·중지·다시 시작, 시스템 오디오 지원 경로.
+- Apple Silicon용 Metal/Core ML/ANE 실행 경로를 선택한 모델로 구현·측정. 현재 CTranslate2 CPU / Intel OpenVINO 경로가 Apple GPU/ANE 지원을 뜻하지 않습니다.
+- sandbox 및 공개 API 오버레이: 현재 macOSPrivateApi는 App Store 준비의 차단 항목입니다.
+
+참고: https://support.apple.com/guide/mac-help/allow-a-remote-computer-to-access-your-mac-mchlp1066/mac
+참고: https://v2.tauri.app/start/prerequisites/
+
+---
+아래는 이전 인수인계 기록이며 최신 상태는 위 내용과 README를 우선합니다.
+
+# 맥북 인계 — OnPen
 
 ## 프로젝트와 배포
 
-- 제품명: LayerPen. 공개 버전: v0.1.0. 이전 내부 버전 0.6.1과 구분합니다.
+- 제품명: OnPen. 공개 버전: v0.1.0. 이전 내부 버전 0.6.1과 구분합니다.
 - 저장소: https://github.com/BAEM1N/layerpen
 - 릴리즈: https://github.com/BAEM1N/layerpen/releases/tag/v0.1.0
 - Windows x64 설치형 EXE, 포터블 ZIP, 소스 ZIP, 의존성 소스, SHA256 체크섬을 제공합니다.
-- `layerpen.app`은 이름을 선택하고 구매 가능 여부만 확인했습니다. 구매·DNS·사이트 배포는 아직 하지 않았습니다.
+- `onpen.app`은 이름을 선택하고 구매 가능 여부만 확인했습니다. 구매·DNS·사이트 배포는 아직 하지 않았습니다.
 
 ## 맥북에서 시작
 
@@ -42,9 +69,11 @@ npm run render
 
 ## 유지해야 할 동작
 
+추가 검토: [로컬 STT 실시간 자막 제안](LIVE-CAPTIONS-PROPOSAL.ko.md). 아직 구현하거나 모델을 실행하지 않았으며, whisper.cpp 다국어 base 양자화와 sherpa-onnx 후보를 실제 Windows/Mac 음성에서 비교하는 단계부터 시작합니다.
+
 - UI: 한국어·영어·일본어·중국어 간체, 시스템 언어 자동 선택과 영어 fallback.
-- 신규 기본 캡처 폴더: Pictures/LayerPen. 기존 기본 Pictures/MonitorInk 설정은 새 경로로 전환하되 파일은 이동하지 않습니다. 직접 지정한 다른 폴더는 유지합니다.
-- Rust 패키지/내부 실행 파일 `monitor-ink`, 앱 식별자 `dev.personal.monitorink`, 설정 디렉터리 및 `MONITOR_INK_DATA_DIR` 환경변수는 호환성을 위해 유지합니다.
+- 신규 기본 캡처 폴더: Pictures/OnPen. 기존 기본 Pictures/MonitorInk 설정은 새 경로로 전환하되 파일은 이동하지 않습니다. 직접 지정한 다른 폴더는 유지합니다.
+- Rust 패키지/내부 실행 파일 `onpen`, 앱 식별자 `dev.personal.monitorink`, 설정 디렉터리 및 `ONPEN_DATA_DIR` 환경변수는 호환성을 위해 유지합니다.
 - 포터블은 설치 없이 실행되지만 설정까지 USB 폴더에 보관하는 방식은 아닙니다.
 - 확대는 정지 화면이며, GIF는 필기 재생입니다. 라이브 화면 녹화나 공동 편집이 아닙니다.
 

@@ -3,6 +3,8 @@
   "windows": [
     "toolbar",
     "settings",
+    "caption-settings",
+    "captions",
     "overlay",
     "identify-*"
   ],

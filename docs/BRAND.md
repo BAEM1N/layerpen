@@ -1,9 +1,5 @@
-# LayerPen
+# OnPen
 
-LayerPen is a free, open-source screen annotation overlay for meetings, demos, and teaching.
+OnPen is a lightweight screen annotation and live-caption tool for teachers, meetings and demos. Use `OnPen` for the product and `OnPen.exe` for portable builds. The existing `BAEM1N/layerpen` repository URL and internal identifiers remain for compatibility.
 
-The name combines the annotation layer above other applications with a pen. Use `LayerPen` for the product, `layerpen` for the repository, and `LayerPen.exe` for the portable executable.
-
-The selected domain is `layerpen.app`. Registration availability was checked on September 7, 2026; the domain has not been purchased or connected yet.
-
-Legacy internal identifiers and the application settings directory remain unchanged to preserve local preferences and compatibility. New captures use Pictures/LayerPen.
+The preferred domain is `onpen.app`; availability was checked on 2026-09-09, but it has not been purchased or connected. App themes: blue (default), teal, green, orange and purple. Drawing colors are independent.

@@ -1,7 +1,7 @@
 function path(s,w,h){
  const a={x:s.points[0].x*w,y:s.points[0].y*h},p=s.points.at(-1),b={x:p.x*w,y:p.y*h};
  if(s.tool==='line')return[a,b];
- if(s.tool==='rectangle')return[a,{x:b.x,y:a.y},b,{x:a.x,y:b.y},a];
+ if(s.tool==='rectangle'||s.tool==='text')return[a,{x:b.x,y:a.y},b,{x:a.x,y:b.y},a];
  if(s.tool==='ellipse'){
   const rx=Math.abs(b.x-a.x)/2,ry=Math.abs(b.y-a.y)/2,n=Math.max(32,Math.min(1024,Math.ceil(Math.PI*Math.sqrt(Math.max(rx,ry)/.5))));
   return Array.from({length:n+1},(_,i)=>({x:(a.x+b.x)/2+rx*Math.cos(i*Math.PI*2/n),y:(a.y+b.y)/2+ry*Math.sin(i*Math.PI*2/n)}));
@@ -17,6 +17,7 @@ function near(a,b,c,d,r){
 export function hits(stroke,eraser,w,h){
  if(!stroke.points.length||!eraser.points.length)return false;
  const a=path(stroke,w,h),b=path(eraser,w,h),r=(stroke.width+eraser.width)/2;
+ if(stroke.tool==='text'&&b.some(p=>p.x>=Math.min(a[0].x,a[2].x)-r&&p.x<=Math.max(a[0].x,a[2].x)+r&&p.y>=Math.min(a[0].y,a[2].y)-r&&p.y<=Math.max(a[0].y,a[2].y)+r))return true;
  for(let i=0;i<Math.max(1,a.length-1);i++)for(let j=0;j<Math.max(1,b.length-1);j++)if(near(a[i],a[Math.min(i+1,a.length-1)],b[j],b[Math.min(j+1,b.length-1)],r))return true;
  return false;
 }

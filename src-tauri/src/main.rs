@@ -1,5 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod animation;
+mod docking;
+mod fonts;
+mod captions;
 mod capture;
 mod geometry;
 mod model;
@@ -14,17 +17,17 @@ type Shared = Mutex<Session>;
 type Result<T> = std::result::Result<T, String>;
 
 fn settings_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf> {
-    if let Some(root) = std::env::var_os("MONITOR_INK_DATA_DIR") {
+    if let Some(root) = std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")) {
         return Ok(std::path::PathBuf::from(root).join("settings.json"));
     }
     Ok(app
         .path()
-        .app_config_dir()
+        .config_dir()
         .map_err(|e| e.to_string())?
-        .join("settings.json"))
+        .join("OnPen").join("settings.json"))
 }
 fn webview_data(app: &tauri::AppHandle) -> Result<std::path::PathBuf> {
-    if let Some(root) = std::env::var_os("MONITOR_INK_DATA_DIR") {
+    if let Some(root) = std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")) {
         return Ok(std::path::PathBuf::from(root).join("webview"));
     }
     app.path().app_local_data_dir().map_err(|e| e.to_string())
@@ -67,7 +70,22 @@ fn displays(app: &tauri::AppHandle) -> Result<Vec<Display>> {
 fn publish(app: &tauri::AppHandle, s: &Session) -> Result<()> {
     app.emit("session", s.snapshot()).map_err(|e| e.to_string())
 }
+fn dock_settings(app: &tauri::AppHandle) -> Result<()> {
+    let Some(toolbar)=app.get_webview_window("toolbar") else {return Ok(());};
+    let Some(panel)=app.get_webview_window("settings") else {return Ok(());};
+    let Some(monitor)=toolbar.current_monitor().map_err(|e|e.to_string())? else {return Ok(());};
+    let scale=monitor.scale_factor();let area=monitor.work_area();
+    let width=(520.*scale).round().min(area.size.width as f64) as u32;
+    let height=(700.*scale).round().min(area.size.height as f64) as u32;
+    panel.set_size(PhysicalSize::new(width,height)).map_err(|e|e.to_string())?;
+    let pos=toolbar.outer_position().map_err(|e|e.to_string())?;
+    let size=toolbar.outer_size().map_err(|e|e.to_string())?;
+    let (x,y)=docking::position(docking::Rect{x:pos.x,y:pos.y,w:size.width as i32,h:size.height as i32},
+      docking::Rect{x:area.position.x,y:area.position.y,w:area.size.width as i32,h:area.size.height as i32},width as i32,height as i32,(8.*scale).round() as i32);
+    panel.set_position(PhysicalPosition::new(x,y)).map_err(|e|e.to_string())
+}
 fn show_settings(app: &tauri::AppHandle) -> Result<()> {
+    dock_settings(app)?;
     let w = app
         .get_webview_window("settings")
         .ok_or("Settings window unavailable")?;
@@ -82,11 +100,9 @@ fn place_toolbar(app: &tauri::AppHandle, s: &Session) -> Result<()> {
         .get_webview_window("toolbar")
         .ok_or("Toolbar unavailable")?;
     let vertical = s.prefs.layout == "vertical";
-    let (width, height) = if vertical {
-        (112.0, (m.height as f64 / m.scale - 48.0).min(620.0))
-    } else {
-        ((m.width as f64 / m.scale).min(600.0), 122.0)
-    };
+    let (natural_width,natural_height)=docking::toolbar_size(vertical,s.prefs.toolbar_lines);
+    let width=natural_width.min(m.width as f64/m.scale-16.).max(48.);
+    let height=natural_height.min(m.height as f64/m.scale-48.).max(48.);
     toolbar
         .set_size(LogicalSize::new(width, height))
         .map_err(|e| e.to_string())?;
@@ -170,6 +186,7 @@ async fn snapshot(app: tauri::AppHandle) -> Result<serde_json::Value> {
 #[tauri::command]
 async fn action(app: tauri::AppHandle, name: String) -> Result<()> {
     if name == "quit" {
+        captions::stop(&app);
         app.exit(0);
         return Ok(());
     }
@@ -181,7 +198,8 @@ async fn action(app: tauri::AppHandle, name: String) -> Result<()> {
     match name.as_str() {
         "settings" => {
             drawing(&app, &mut s, false)?;
-            show_settings(&app)?;
+            let panel=app.get_webview_window("settings").ok_or("Settings window unavailable")?;
+            if panel.is_visible().unwrap_or(false){panel.hide().map_err(|e|e.to_string())?;}else{show_settings(&app)?;}
         }
         "toggle" => {
             let enabled = !s.drawing;
@@ -269,11 +287,12 @@ async fn select_monitor(app: tauri::AppHandle, id: String) -> Result<()> {
 #[tauri::command]
 async fn set_tool(app: tauri::AppHandle, tool: String, color: String, width: f64) -> Result<()> {
     let probe = Stroke {
-        tool: if tool == "select" || tool == "zoom" {
+        tool: if tool == "select" || tool == "zoom" || tool == "text" {
             "pen".into()
         } else {
             tool.clone()
         },
+        text: None,
         times: vec![],
         color: color.clone(),
         width,
@@ -325,7 +344,7 @@ async fn configure(app: tauri::AppHandle, mut preferences: Preferences) -> Resul
     }
     s.prefs = preferences;
     let result = (|| {
-        if s.prefs.layout != previous.layout {
+        if s.prefs.layout != previous.layout || s.prefs.toolbar_lines != previous.toolbar_lines {
             place_toolbar(&app, &s)?;
         }
         save(&app, &s.prefs)
@@ -452,7 +471,7 @@ async fn identify(app: tauri::AppHandle) -> Result<()> {
             &label,
             WebviewUrl::App(format!("index.html?view=identify&number={}", i + 1).into()),
         )
-        .title("LayerPen · 화면 식별")
+        .title("OnPen · 화면 식별")
         .data_directory(webview_data(&app)?)
         .inner_size(180., 130.)
         .decorations(false)
@@ -489,11 +508,14 @@ fn main() {
                 if let Ok(mut s) = state.lock() { let enabled = !s.drawing; if let Err(e) = drawing(app,&mut s,enabled) { s.warning = Some(e); } let _ = publish(app,&s); };
             }
         }).build())
-        .invoke_handler(tauri::generate_handler![snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
+        .invoke_handler(tauri::generate_handler![fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
         .setup(|app| {
-            let prefs = settings_path(app.handle()).ok().and_then(|p|std::fs::read(p).ok()).and_then(|b|serde_json::from_slice(&b).ok()).unwrap_or_default();
+            let prefs = settings_path(app.handle()).ok().and_then(|p|std::fs::read(p).ok()).or_else(||{
+                if std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")).is_some(){return None;}
+                app.path().app_config_dir().ok().and_then(|p|std::fs::read(p.join("settings.json")).ok())
+            }).and_then(|b|serde_json::from_slice(&b).ok()).unwrap_or_default();
             let mut s = Session::new(prefs);
-            let profile = std::env::var_os("MONITOR_INK_DATA_DIR").map(std::path::PathBuf::from);
+            let profile = std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")).map(std::path::PathBuf::from);
             s.prefs.migrate_capture_dir(&app.path().picture_dir()?, profile.as_deref());
             s.displays = displays(app.handle())?;
             if s.prefs.monitor.is_none() {
@@ -504,19 +526,20 @@ fn main() {
             // Webviews can invoke commands before setup returns. Register state first.
             app.manage(Mutex::new(s));
             app.manage(animation::ExportState::default());
+            app.manage(captions::CaptionState::default());
             let overlay = WebviewWindowBuilder::new(app,"overlay",WebviewUrl::App("index.html?view=overlay".into()))
                 .data_directory(webview_data(app.handle())?)
-                .title("LayerPen · 필기").decorations(false).transparent(true).shadow(false).always_on_top(true)
+                .title("OnPen · 필기").decorations(false).transparent(true).shadow(false).always_on_top(true)
                 .skip_taskbar(true).visible(false).focused(false).resizable(false).build()?;
             WebviewWindowBuilder::new(app,"toolbar",WebviewUrl::App("index.html?view=toolbar".into()))
                 .parent(&overlay)?
                 .data_directory(webview_data(app.handle())?)
-                .title("LayerPen").inner_size(600.,122.).decorations(false).transparent(true).shadow(false)
+                .title("OnPen").inner_size(600.,122.).decorations(false).transparent(true).shadow(false)
                 .always_on_top(true).resizable(false).focused(false).build()?;
             WebviewWindowBuilder::new(app,"settings",WebviewUrl::App("index.html?view=settings".into()))
                 .parent(&overlay)?.always_on_top(true)
                 .data_directory(webview_data(app.handle())?)
-                .title("LayerPen · 설정").inner_size(620.,660.).min_inner_size(520.,540.).visible(false).build()?;
+                .title("OnPen · 설정").inner_size(520.,700.).decorations(false).resizable(false).skip_taskbar(true).visible(false).build()?;
             let state = app.state::<Shared>();
             let mut s = state.lock().map_err(|e| e.to_string())?;
             #[cfg(target_os="linux")]
@@ -528,6 +551,10 @@ fn main() {
             if let Err(e) = place(app.handle(), &mut s) { s.warning = Some(e); let _ = show_settings(app.handle()); }
             publish(app.handle(), &s)?;
             drop(s);
+            if std::env::var("ONPEN_CAPTIONS_OPEN").or_else(|_|std::env::var("LAYERPEN_CAPTIONS_OPEN")).as_deref() == Ok("1") {
+                let caption_app = app.handle().clone();
+                tauri::async_runtime::spawn(async move { let _ = captions::caption_open(caption_app).await; });
+            }
             let handle = app.handle().clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_secs(2));
@@ -549,13 +576,17 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window,event| {
+            if window.label()=="toolbar" && matches!(event,tauri::WindowEvent::Moved(_)|tauri::WindowEvent::Resized(_)|tauri::WindowEvent::ScaleFactorChanged{..}) {
+                if window.app_handle().get_webview_window("settings").is_some_and(|w|w.is_visible().unwrap_or(false)){let _=dock_settings(window.app_handle());}
+            }
             if let tauri::WindowEvent::CloseRequested {api,..} = event {
                 match window.label() {
                     "settings" => { api.prevent_close(); let _ = window.hide(); }
-                    "toolbar" => window.app_handle().exit(0),
+                    "caption-settings" => { api.prevent_close(); captions::stop(window.app_handle()); let _ = window.hide(); }
+                    "toolbar" => { captions::stop(window.app_handle()); window.app_handle().exit(0); },
                     _ => {}
                 }
             }
         })
-        .run(tauri::generate_context!()).expect("LayerPen could not start");
+        .run(tauri::generate_context!()).expect("OnPen could not start");
 }

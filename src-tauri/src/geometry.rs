@@ -7,7 +7,7 @@ fn path(s: &Stroke, w: f64, h: f64) -> Vec<P> {
     let b = (last.x * w, last.y * h);
     match s.tool.as_str() {
         "line" => vec![a, b],
-        "rectangle" => vec![a, (b.0, a.1), b, (a.0, b.1), a],
+        "rectangle" | "text" => vec![a, (b.0, a.1), b, (a.0, b.1), a],
         "ellipse" => {
             let rx = (b.0 - a.0).abs() / 2.;
             let ry = (b.1 - a.1).abs() / 2.;
@@ -63,6 +63,9 @@ pub fn hits(stroke: &Stroke, eraser: &Stroke, w: f64, h: f64) -> bool {
     let a = path(stroke, w, h);
     let b = path(eraser, w, h);
     let r = (stroke.width + eraser.width) / 2.;
+    if stroke.tool == "text" && b.iter().any(|p| p.0 >= a[0].0.min(a[2].0)-r && p.0 <= a[0].0.max(a[2].0)+r && p.1 >= a[0].1.min(a[2].1)-r && p.1 <= a[0].1.max(a[2].1)+r) {
+        return true;
+    }
     for i in 0..a.len().saturating_sub(1).max(1) {
         for j in 0..b.len().saturating_sub(1).max(1) {
             if near(
@@ -85,7 +88,8 @@ mod tests {
     use crate::model::Point;
     fn stroke(tool: &str, coords: &[(f64, f64)]) -> Stroke {
         Stroke {
-            times: vec![],
+            text: None,
+        times: vec![],
             tool: tool.into(),
             color: "#ff0000".into(),
             width: 4.,

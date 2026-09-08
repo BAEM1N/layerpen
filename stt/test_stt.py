@@ -1,0 +1,140 @@
+import unittest
+import asyncio
+import json
+from unittest.mock import patch
+import numpy as np
+from providers import Protocol
+from worker import Segmenter, Audio, STOP, cloud
+from acceleration import choose
+
+
+class AccelerationTests(unittest.TestCase):
+    def test_auto_uses_supported_gpu_and_cpu_when_unavailable(self):
+        devices = [{'id':'cpu','providers':['whisper','qwen']},{'id':'openvino:GPU','providers':['whisper']},{'id':'openvino:NPU','providers':['whisper']}]
+        self.assertEqual(choose({'provider':'whisper'},devices),'openvino:GPU')
+        self.assertEqual(choose({'provider':'qwen'},devices),'cpu')
+        self.assertEqual(choose({'provider':'whisper'},devices[:1]),'cpu')
+        self.assertEqual(choose({'provider':'whisper','accelerator':'openvino:NPU'},devices),'openvino:NPU')
+        with self.assertRaises(RuntimeError): choose({'provider':'qwen','accelerator':'openvino:NPU'},devices)
+
+
+class StreamingTests(unittest.TestCase):
+    def test_no_hallucination_jobs_for_silence(self):
+        s = Segmenter()
+        for _ in range(1000):
+            self.assertIsNone(s.feed(np.zeros(1600, np.float32)))
+        self.assertEqual(len(s.blocks), 0)
+        self.assertLessEqual(len(s.pre), 3)
+
+    def test_partial_then_final_and_no_cross_segment_duplication(self):
+        s = Segmenter()
+        events = []
+        for b in [np.ones(1600, np.float32)*.1]*20 + [np.zeros(1600, np.float32)]*8:
+            result = s.feed(b)
+            if result: events.append(result)
+        self.assertFalse(events[0][1])
+        self.assertTrue(events[-1][1])
+        self.assertEqual(events[-1][2], 0)
+        self.assertEqual(s.segment, 1)
+        self.assertEqual(len(s.blocks), 0)
+
+    def test_continuous_audio_bounded(self):
+        s = Segmenter()
+        for _ in range(10000):
+            s.feed(np.ones(1600, np.float32)*.1)
+            self.assertLess(len(s.blocks), 80)
+
+    def test_backpressure_stops_instead_of_unbounded_latency(self):
+        STOP.clear()
+        audio = Audio({}, 16000)
+        for _ in range(41): audio.put(np.zeros(1600, np.float32))
+        self.assertTrue(STOP.is_set())
+        self.assertIsNotNone(audio.error)
+        self.assertEqual(audio.queue.qsize(), 40)
+        STOP.clear()
+
+    def test_openai_delta_final_and_late_old_turn(self):
+        p = Protocol({'provider': 'openai'})
+        p.receive({'type':'input_audio_buffer.committed','item_id':'a'})
+        p.receive({'type':'input_audio_buffer.committed','item_id':'b'})
+        kind = 'conversation.item.input_audio_transcription.'
+        self.assertEqual(p.receive({'type':kind+'delta','item_id':'a','delta':'Hello'})[0]['text'], 'Hello')
+        self.assertEqual(p.receive({'type':kind+'delta','item_id':'a','delta':' world'})[0]['text'], 'Hello world')
+        self.assertEqual(p.receive({'type':kind+'completed','item_id':'b','transcript':'New'})[0]['type'], 'final')
+        self.assertEqual(p.receive({'type':kind+'completed','item_id':'a','transcript':'Old'}), [])
+
+    def test_gemini_interim_is_not_final(self):
+        p = Protocol({'provider':'gemini'})
+        self.assertEqual(p.receive({'serverContent':{'interimInputTranscription':{'text':'안녕'}}})[0]['type'], 'partial')
+        self.assertEqual(p.receive({'serverContent':{'inputTranscription':{'text':'안녕하세요'}}})[0]['type'], 'final')
+
+    def test_gemini_language_hints_use_supported_locale_codes(self):
+        for language, expected in [('ko', ['ko-KR']), ('en', ['en-US']), ('ja', ['ja-JP']), ('zh', ['cmn-Hans-CN']), ('auto', [])]:
+            p = Protocol({'provider': 'gemini', 'language': language})
+            self.assertEqual(p.setup()['setup']['inputAudioTranscription']['languageCodes'], expected)
+
+    def test_eleven_and_secret_redaction(self):
+        p = Protocol({'provider':'elevenlabs','api_key':'secret'})
+        self.assertEqual(p.receive({'message_type':'partial_transcript','text':'test'})[0]['type'], 'partial')
+        with self.assertRaises(RuntimeError) as err:
+            p.receive({'message_type':'error','error':'secret'})
+        self.assertNotIn('secret', str(err.exception))
+
+    def test_sample_rates_and_wire_formats(self):
+        for provider, rate, field in [('openai',24000,'audio'),('gemini',16000,'realtimeInput'),('elevenlabs',16000,'audio_base_64')]:
+            p = Protocol({'provider':provider, 'api_key':'test'})
+            self.assertEqual(p.rate,rate)
+            self.assertIn(field,p.audio(b'\0\0'))
+            self.assertTrue(p.connection()[0].startswith('wss://'))
+
+
+class CloudTransportTests(unittest.IsolatedAsyncioTestCase):
+    async def test_all_three_stream_audio_and_deliver_captions(self):
+        from websockets.asyncio.server import serve
+        for provider in ('openai','gemini','elevenlabs'):
+            with self.subTest(provider=provider):
+                STOP.clear()
+                events, chunks = [], []
+                class TestAudio:
+                    error = None
+                    def __init__(self,*args): self.n=0
+                    def start(self): pass
+                    def next(self):
+                        self.n+=1
+                        if self.n>3:
+                            import time
+                            time.sleep(.2)
+                            return None
+                        return np.zeros(1600,np.float32)
+                async def server(ws):
+                    if provider!='elevenlabs':
+                        setup=json.loads(await ws.recv())
+                        self.assertIn('session' if provider=='openai' else 'setup',setup)
+                    ready={'type':'session.updated'} if provider=='openai' else {'setupComplete':{}} if provider=='gemini' else {'message_type':'session_started'}
+                    await ws.send(json.dumps(ready))
+                    for _ in range(3): chunks.append(json.loads(await ws.recv()))
+                    msg={'type':'conversation.item.input_audio_transcription.completed','item_id':'1','transcript':'test'} if provider=='openai' else {'serverContent':{'inputTranscription':{'text':'test'}}} if provider=='gemini' else {'message_type':'committed_transcript','text':'test'}
+                    await ws.send(json.dumps(msg))
+                    await ws.wait_closed()
+                async with serve(server,'127.0.0.1',0) as srv:
+                    port=srv.sockets[0].getsockname()[1]
+                    with patch.object(Protocol,'connection',return_value=(f'ws://127.0.0.1:{port}',{})), patch('worker.Audio',TestAudio), patch('worker.emit',side_effect=lambda kind,**kw: events.append({'type':kind,**kw})):
+                        await asyncio.wait_for(cloud({'provider':provider,'api_key':'fake-test-key'}),5)
+                self.assertEqual(len(chunks),3)
+                self.assertTrue(any(e.get('text')=='test' and e['type']=='final' for e in events))
+        STOP.clear()
+
+    async def test_auth_failure_never_opens_audio(self):
+        from websockets.asyncio.server import serve
+        async def server(ws):
+            await ws.recv()
+            await ws.send(json.dumps({'error':{'message':'secret'}}))
+        STOP.clear()
+        async with serve(server,'127.0.0.1',0) as srv:
+            port=srv.sockets[0].getsockname()[1]
+            with patch.object(Protocol,'connection',return_value=(f'ws://127.0.0.1:{port}',{})),patch.object(Audio,'start') as start:
+                with self.assertRaises(RuntimeError): await cloud({'provider':'openai'})
+                start.assert_not_called()
+
+
+if __name__ == '__main__': unittest.main()

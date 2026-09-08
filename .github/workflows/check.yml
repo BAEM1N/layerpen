@@ -23,6 +23,6 @@ jobs:
         with:
           name: layerpen-${{ matrix.os }}
           path: |
-            src-tauri/target/release/monitor-ink
-            src-tauri/target/release/monitor-ink.exe
+            src-tauri/target/release/onpen
+            src-tauri/target/release/onpen.exe
 

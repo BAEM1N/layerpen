@@ -1,0 +1,21 @@
+/* The settings panel belongs beside the toolbar, with its own scrolling content. */
+body[data-view=settings]{border:1px solid hsl(var(--theme-hue,212) 18% 30%);border-radius:14px;min-height:100vh;overflow-x:hidden}
+.settings{padding:0 22px 18px;max-width:none}.settings header{position:sticky;top:0;z-index:3;margin:0 -22px 20px;padding:18px 22px;background:hsl(var(--theme-hue,212) 18% 9%);border-bottom:1px solid hsl(var(--theme-hue,212) 18% 22%)}
+.settings .logo{width:40px;height:40px;font-size:23px;border-radius:12px}.settings h1{font-size:20px}.settings header p{font-size:11px}.panel-close{display:grid;place-items:center;width:30px;height:30px;background:transparent;border-radius:8px;flex-shrink:0}.panel-close svg{width:16px;height:16px}.version{margin-left:auto}
+.settings .monitor-card{padding:14px;gap:12px}.settings .display-picture{width:52px}.settings .language-setting{margin-bottom:12px}.settings .language-setting select{max-width:170px}.settings .keymap-row{grid-template-columns:minmax(0,1fr) 120px 36px}
+body[data-view=toolbar] .toolbar{border-radius:14px;background:hsl(var(--theme-hue,212) 18% 11%);box-shadow:0 4px 10px #0004;gap:5px;padding:9px}
+body[data-view=toolbar] .toolbar button{border-radius:9px}body[data-view=toolbar] .toolbar button.active{box-shadow:inset 0 0 0 1px hsl(var(--theme-hue,212) 55% 55%);background:hsl(var(--theme-hue,212) 35% 24%);color:hsl(var(--theme-hue,212) 90% 85%)}
+body[data-view=toolbar] .toolbar .toolbar-brand{font-size:19px;font-weight:800;letter-spacing:-2px;color:hsl(var(--theme-hue,212) 90% 76%);background:hsl(var(--theme-hue,212) 28% 20%)}
+#captionOpen{font-size:12px;font-weight:750}.toolbar #clear{color:#f29eaa}.toolbar [data-action=settings]{color:hsl(var(--theme-hue,212) 85% 78%)}
+@media(max-width:420px){.settings{padding:0 14px 14px}.settings header{margin:0 -14px 16px;padding:14px}.settings header p{max-width:160px}.settings .keymap-row{grid-template-columns:minmax(0,1fr) 100px 36px}.settings .version{display:none}}
+
+/* Six combinations: direction chooses flow, line count chooses the cross axis. */
+body[data-view=toolbar][data-layout] .toolbar{grid-template-columns:none;grid-template-rows:repeat(var(--toolbar-lines,2),36px);grid-auto-flow:column;grid-auto-columns:36px;gap:5px;width:max-content;max-width:calc(100vw - 12px);max-height:calc(100vh - 28px);overflow:auto;scrollbar-width:thin;margin:3px auto 0}
+body[data-view=toolbar][data-layout=vertical] .toolbar{grid-template-columns:repeat(var(--toolbar-lines,2),36px);grid-template-rows:none;grid-auto-flow:row;grid-auto-rows:36px}
+body[data-view=toolbar][data-lines="1"][data-layout=vertical] .toolbar-caption{display:none}
+body[data-view=toolbar] #thicknessMenu .size-choices{display:flex;flex-direction:column;gap:3px}body[data-view=toolbar] #thicknessMenu{padding:3px;max-height:calc(100vh - 8px);overflow:auto}
+.font-actions{display:flex;gap:12px;align-items:center;margin:10px 0 14px}.font-actions .hint{margin:0}.settings #textFont{font:inherit;font-size:12px;width:260px;max-width:65%;padding:9px}
+
+body[data-view=toolbar][data-layout=horizontal] #thicknessMenu .size-choices{flex-direction:row}
+
+body[data-view=toolbar] .toolbar .quit-app{color:#f4b6bd;border:1px solid #69414b;background:#35252c}body[data-view=toolbar] .toolbar .quit-app:hover{background:#64333e}

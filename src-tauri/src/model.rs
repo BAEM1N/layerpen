@@ -17,6 +17,44 @@ pub struct Point {
     pub y: f64,
 }
 #[derive(Clone, Serialize, Deserialize)]
+pub struct TextData {
+    pub content: String,
+    pub font: String,
+    pub size: f64,
+    pub box_width: f64,
+    pub box_height: f64,
+}
+impl TextData {
+    pub fn valid(&self) -> bool {
+        !self.content.trim().is_empty() && self.content.chars().count() <= 4096
+            && valid_font(&self.font)
+            && self.size.is_finite() && (0.25..=1024.).contains(&self.size)
+            && [self.box_width, self.box_height].iter().all(|v| v.is_finite() && (0.01..=32768.).contains(v))
+    }
+}
+#[cfg(test)]
+mod text_tests {
+    use super::*;
+    #[test]
+    fn text_validation_legacy_defaults_and_font_preferences() {
+        let legacy = serde_json::json!({"tool":"pen","color":"#123456","width":4,"points":[{"x":0.1,"y":0.1}]});
+        let old: Stroke = serde_json::from_value(legacy).unwrap();
+        assert!(old.valid());assert!(old.text.is_none());
+        let mut text = old.clone();text.tool="text".into();text.points.push(Point{x:0.4,y:0.2});
+        text.text=Some(TextData{content:"한글 Text".into(),font:"Malgun Gothic".into(),size:24.,box_width:300.,box_height:80.});
+        assert!(text.valid());
+        let eraser=Stroke{points:vec![Point{x:0.25,y:0.15}],..old};
+        assert!(crate::geometry::hits(&text,&eraser,1000.,800.));
+        text.text.as_mut().unwrap().content=" ".into();assert!(!text.valid());
+        let mut prefs: Preferences=serde_json::from_str("{}").unwrap();assert_eq!(prefs.text_font,"Malgun Gothic");
+        prefs.text_font="Arial".into();assert!(prefs.valid());
+        prefs.text_font="bad\nfont".into();assert!(!prefs.valid());
+    }
+}
+pub fn valid_font(font: &str) -> bool {
+    !font.trim().is_empty() && font.chars().count() <= 160 && !font.chars().any(char::is_control)
+}
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Stroke {
     pub tool: String,
     pub color: String,
@@ -26,12 +64,14 @@ pub struct Stroke {
     pub points: Vec<Point>,
     #[serde(default)]
     pub times: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<TextData>,
 }
 impl Stroke {
     pub fn valid(&self) -> bool {
         matches!(
             self.tool.as_str(),
-            "pen" | "marker" | "fade" | "eraser" | "line" | "rectangle" | "ellipse"
+            "pen" | "marker" | "fade" | "eraser" | "line" | "rectangle" | "ellipse" | "text"
         ) && self.color.len() == 7
             && self.color.starts_with('#')
             && self.color[1..].bytes().all(|c| c.is_ascii_hexdigit())
@@ -45,6 +85,10 @@ impl Stroke {
                     && self.times.last().copied().unwrap_or(0) <= 3_600_000))
             && !self.points.is_empty()
             && self.points.len() <= 100_000
+            && (if self.tool == "text" {
+                self.points.len() == 2 && self.text.as_ref().is_some_and(TextData::valid)
+                    && self.points[1].x > self.points[0].x && self.points[1].y > self.points[0].y
+            } else { self.text.is_none() })
             && self.points.iter().all(|p| {
                 p.x.is_finite()
                     && p.y.is_finite()
@@ -388,8 +432,11 @@ fn valid_chord(chord: &str) -> bool {
 #[serde(default)]
 pub struct Preferences {
     pub language: String,
+    pub text_font: String,
+    pub theme: String,
     pub monitor: Option<String>,
     pub layout: String,
+    pub toolbar_lines: u8,
     pub pen_width: f64,
     pub marker_width: f64,
     pub eraser_width: f64,
@@ -410,8 +457,11 @@ impl Default for Preferences {
     fn default() -> Self {
         Self {
             language: "auto".into(),
+            text_font: "Malgun Gothic".into(),
+            theme: "blue".into(),
             monitor: None,
             layout: "horizontal".into(),
+            toolbar_lines: 2,
             pen_width: 4.,
             marker_width: 16.,
             eraser_width: 24.,
@@ -433,26 +483,32 @@ impl Default for Preferences {
 impl Preferences {
     pub fn migrate_capture_dir(&mut self, pictures: &std::path::Path, profile: Option<&std::path::Path>) {
         if self.capture_dir.is_empty() {
-            let root = profile.map(|p| p.join("captures")).unwrap_or_else(|| pictures.join("LayerPen"));
+            let root = profile.map(|p| p.join("captures")).unwrap_or_else(|| pictures.join("OnPen"));
             self.capture_dir = root.to_string_lossy().into_owned();
             return;
         }
-        let old = pictures.join("MonitorInk");
-        let same = std::path::Path::new(&self.capture_dir) == old;
-        #[cfg(target_os = "windows")]
-        let same = same || self.capture_dir.replace('/', "\\").trim_end_matches('\\').eq_ignore_ascii_case(&old.to_string_lossy());
+        let same = ["LayerPen","InkLatch","Inklach","MonitorInk","Monitor Ink"].iter().any(|name| {
+            let old=pictures.join(name);
+            let same=std::path::Path::new(&self.capture_dir)==old;
+            #[cfg(target_os="windows")]
+            let same=same || self.capture_dir.replace('/', "\\").trim_end_matches('\\').eq_ignore_ascii_case(&old.to_string_lossy());
+            same
+        });
         if same {
-            self.capture_dir = pictures.join("LayerPen").to_string_lossy().into_owned();
+            self.capture_dir = pictures.join("OnPen").to_string_lossy().into_owned();
         }
     }
     pub fn valid(&self) -> bool {
         matches!(self.language.as_str(), "auto" | "ko" | "en" | "ja" | "zh-CN")
+            && matches!(self.theme.as_str(), "blue" | "teal" | "green" | "orange" | "purple")
+            && valid_font(&self.text_font)
             && (1..=10).contains(&self.fade_seconds)
             && [0.5, 1., 2., 4.].contains(&self.gif_speed)
             && matches!(
                 self.gif_background.as_str(),
                 "screen" | "white" | "dark" | "transparent"
             )
+            && (1..=3).contains(&self.toolbar_lines)
             && matches!(self.layout.as_str(), "horizontal" | "vertical")
             && self.palette.iter().all(|c| {
                 c.len() == 7 && c.starts_with('#') && c[1..].bytes().all(|b| b.is_ascii_hexdigit())
@@ -626,14 +682,30 @@ impl Session {
 #[cfg(test)]
 mod tests {
     #[test]
+    fn theme_preferences_migrate_and_roundtrip_without_changing_ink() {
+        let mut prefs: super::Preferences = serde_json::from_str("{}").unwrap();
+        assert_eq!(prefs.theme, "blue");
+        let palette=prefs.palette.clone();
+        for theme in ["blue", "teal", "green", "orange", "purple"] {
+            prefs.theme=theme.into();assert!(prefs.valid());
+            let loaded: super::Preferences=serde_json::from_str(&serde_json::to_string(&prefs).unwrap()).unwrap();
+            assert_eq!(loaded.theme,theme);assert_eq!(loaded.palette,palette);
+        }
+        prefs.theme="unknown".into();assert!(!prefs.valid());
+    }
+    #[test]
     fn capture_folder_migration_preserves_custom_paths() {
         let pictures = std::path::Path::new("/users/example/Pictures");
         let mut p = super::Preferences::default();
         p.migrate_capture_dir(pictures, None);
-        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("LayerPen"));
+        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("OnPen"));
         p.capture_dir = pictures.join("MonitorInk").to_string_lossy().into_owned();
         p.migrate_capture_dir(pictures, None);
-        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("LayerPen"));
+        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("OnPen"));
+        for old in ["LayerPen","InkLatch","Inklach","Monitor Ink"] {
+            p.capture_dir=pictures.join(old).to_string_lossy().into_owned();p.migrate_capture_dir(pictures,None);
+            assert_eq!(std::path::Path::new(&p.capture_dir),pictures.join("OnPen"));
+        }
         p.capture_dir = pictures.join("Meetings").to_string_lossy().into_owned();
         let custom = p.capture_dir.clone();
         p.migrate_capture_dir(pictures, None);
@@ -650,7 +722,8 @@ mod tests {
             width: 4.,
             opacity: 0.3,
             points: vec![Point { x: 0.5, y: 0.5 }],
-            times: vec![],
+            text: None,
+        times: vec![],
         }
     }
     #[test]

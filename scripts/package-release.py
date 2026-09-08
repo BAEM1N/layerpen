@@ -12,17 +12,19 @@ if out==root or root in out.parents: raise SystemExit('Release output must be ou
 out.mkdir(parents=True,exist_ok=True)
 version=json.loads((root/'package.json').read_text())['version']
 target=Path(os.environ.get('CARGO_TARGET_DIR',str(root/'src-tauri/target'))).resolve()/'release'
-setup=target/'bundle/nsis'/f'LayerPen_{version}_x64-setup.exe'
-binary=target/'monitor-ink.exe'
+setup=target/'bundle/nsis'/f'OnPen_{version}_x64-setup.exe'
+binary=target/'onpen.exe'
 assert setup.is_file() and binary.is_file(), 'Build the Windows installer first.'
 shutil.copy2(setup,out/setup.name)
 resources={'LICENSE':root/'LICENSE','THIRD-PARTY-NOTICES.txt':root/'THIRD-PARTY-NOTICES.txt','third-party-sources.zip':root/'third-party-sources.zip'}
-for name in ['GETTING-STARTED.md','INSTALL.ko.md','USER-GUIDE.ko.md','README.ja.md','README.zh-CN.md']:
+for name in ['GETTING-STARTED.md','INSTALL.ko.md','USER-GUIDE.ko.md','README.ja.md','README.zh-CN.md','STT-SETUP.md']:
  resources[name]=root/'docs'/name
-with ZipFile(out/f'LayerPen-{version}-windows-x64-portable.zip','w',ZIP_DEFLATED) as z:
- z.write(binary,'LayerPen/LayerPen.exe')
- for name,path in resources.items():z.write(path,'LayerPen/'+name)
-source=out/f'LayerPen-{version}-source.zip'
+with ZipFile(out/f'OnPen-{version}-windows-x64-portable.zip','w',ZIP_DEFLATED) as z:
+ z.write(binary,'OnPen/OnPen.exe')
+ for name,path in resources.items():z.write(path,'OnPen/'+name)
+ for path in (root/'stt').glob('*'):
+  if path.suffix in {'.py','.txt','.ps1'} and not path.name.startswith(('test_','benchmark')):z.write(path,'OnPen/stt/'+path.name)
+source=out/f'OnPen-{version}-source.zip'
 subprocess.run([sys.executable,str(root/'scripts/package-source.py'),str(source)],check=True)
 shutil.copy2(root/'third-party-sources.zip',out/'third-party-sources.zip')
 for f in out.glob('*.zip'):

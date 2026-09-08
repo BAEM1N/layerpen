@@ -1,4 +1,4 @@
-# Contributing to LayerPen
+# Contributing to OnPen
 
 Thank you for helping make screen annotation useful during real conversations.
 

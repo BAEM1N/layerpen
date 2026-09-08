@@ -13,7 +13,7 @@ Coordinates and stroke widths are stored in original-screen space. Convert point
 
 ## Rebrand compatibility
 
-LayerPen 0.1.0 changes the displayed product name and organizes documentation. The Rust package/binary `monitor-ink`, identifier `dev.personal.monitorink`, and `MONITOR_INK_DATA_DIR` remain for compatibility. Captures default to Pictures/LayerPen; the exact previous default Pictures/MonitorInk is migrated in preferences without moving files. Custom folders remain unchanged. An old Monitor Ink installer entry may coexist with a newly named LayerPen entry.
+OnPen 0.1.0 changes the displayed product name and organizes documentation. The Rust package/binary `onpen`, identifier `dev.personal.monitorink`, and `ONPEN_DATA_DIR` remain for compatibility. Captures default to Pictures/OnPen; the exact previous default Pictures/MonitorInk is migrated in preferences without moving files. Custom folders remain unchanged. An old Monitor Ink installer entry may coexist with a newly named OnPen entry.
 
 ## Release checks
 
@@ -22,3 +22,5 @@ Run the documented unit tests, build the Windows installer, launch an isolated p
 Create a source archive with `python scripts/package-source.py /path/to/output.zip`. It excludes generated files, installed dependencies, binary outputs, and Git internals. Keep release archives outside this repository. Internal pre-release research and historical captures are excluded from the public repository.
 
 See [localization](LOCALIZATION.md) for the four UI languages. Public versions start at 0.1.0 independently of the earlier local prototype sequence.
+
+New native package: `onpen`. Settings: OS config directory / OnPen / settings.json; previous identifier settings are read on first launch. Imported fonts are copied into fonts/ beside settings. The identifier itself stays unchanged for upgrade compatibility. ONPEN_* environment variables are preferred; legacy names are input aliases. Capture defaults migrate LayerPen, InkLatch, Inklach, MonitorInk and Monitor Ink under Pictures, without moving existing exports or changing custom directories.

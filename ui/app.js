@@ -1,3 +1,5 @@
+import {ensureFonts,fontChoices} from './fonts.js';
+import {themes,applyTheme} from './theme.js';
 import {languages,loadLanguages,setLanguage,t,localizeDocument} from './i18n.js';
 import {activeZoom,sourcePoint,screenPoint,regionView,sourceWidth} from './zoom.js';
 import {visibleFading,boardBackground} from './lecture.js';
@@ -6,6 +8,8 @@ import {exportGif} from './replay.js';
 import {pickStroke,translateStroke,strokeBounds,resizeStroke} from './selection.js';
 import { normalizedPoint, redraw, exportLayer } from './drawing.js';
 import { hits } from './hit-test.js';
+import {createTextEditor} from './text-editor.js';
+let textEditor;
 
 const params = new URLSearchParams(location.search);
 const view = params.get('view') || 'settings';
@@ -27,11 +31,12 @@ let zoomRegion=null,zoomImage=null,zoomImageId=null,zoomLoadingId=null;
 const inputPoint=e=>sourcePoint(e.clientX,e.clientY,innerWidth,innerHeight,activeZoom(state));
 const widths=[2,4,8,16,24];
 const widthNames=['아주 가늘게','가늘게','보통','굵게','아주 굵게'];
-const defaults={language:'auto',fade_seconds:3,layout:'horizontal',pen_width:4,marker_width:16,eraser_width:24,marker_opacity:0.3,shortcut:'CommandOrControl+Shift+D',capture_dir:'',capture_layer_only:false,gif_speed:1,gif_background:'white',gif_repeat:true,tool_shortcuts:true,keybindings:defaultBindings,global_shortcut_enabled:true,palette:['#8b5cf6','#f43f5e','#fbbf24','#38bdf8','#f8fafc']};
+const defaults={language:'auto',theme:'blue',text_font:'Malgun Gothic',fade_seconds:3,layout:'horizontal',toolbar_lines:2,pen_width:4,marker_width:16,eraser_width:24,marker_opacity:0.3,shortcut:'CommandOrControl+Shift+D',capture_dir:'',capture_layer_only:false,gif_speed:1,gif_background:'white',gif_repeat:true,tool_shortcuts:true,keybindings:defaultBindings,global_shortcut_enabled:true,palette:['#8b5cf6','#f43f5e','#fbbf24','#38bdf8','#f8fafc']};
 const preferences=()=>({...defaults,...state?.preferences});
 const shortcutLabel=value=>value.replace('CommandOrControl',/Mac/.test(navigator.platform)?'⌘':'Ctrl').replace('Shift','⇧').replaceAll('+',' ');
 function sizes(name,value){return `<div class="size-choices" data-size-group="${name}">${widths.map((w,i)=>`<button type="button" class="size-choice ${value===w?'selected':''}" data-size="${w}" title="${widthNames[i]}" aria-label="${widthNames[i]}" aria-pressed="${value===w}"><span style="--dot:${Math.max(3,w*.65)}px"></span></button>`).join('')}</div>`;}
 const icons = {
+  text:'<path d="M4 4h16M12 4v17M8 21h8M4 4v4m16-4v4"/>',
   zoom:'<circle cx="10" cy="10" r="7"/><path d="m15 15 7 7M6 10h8m-4-4v8"/>',
   zoomReset:'<circle cx="10" cy="10" r="7"/><path d="m15 15 7 7M6 10h8"/>',
   board:'<rect x="2" y="3" width="20" height="15" rx="2"/><path d="M8 22h8m-4-4v4M5 14l5-5 4 3 5-6"/>',
@@ -64,7 +69,7 @@ async function invoke(command, args = {}) {
   // Explicit UI preview only. This never pretends to control native windows.
   if (!previewState) previewState = {
     monitors:[{id:'display-a',name:'DELL U2723QE',width:3840,height:2160,scale:1.5,x:0,y:0},{id:'display-b',name:'LG ULTRAGEAR',width:2560,height:1440,scale:1,x:3840,y:0}],
-    selected:'display-b',connected:true,drawing:false,tool:'pen',color:'#8b5cf6',width:4,strokes:[],canUndo:false,canRedo:false,preferences:{...defaults},warning:'브라우저 UI 미리보기 · 실제 화면 오버레이는 데스크톱 앱에서 작동합니다.'
+    selected:'display-b',connected:true,drawing:false,tool:'pen',color:'#8b5cf6',width:4,strokes:[],canUndo:false,canRedo:false,preferences:{...defaults,layout:params.get('layout')==='vertical'?'vertical':'horizontal',toolbar_lines:[1,2,3].includes(Number(params.get('lines')))?Number(params.get('lines')):2},warning:'브라우저 UI 미리보기 · 실제 화면 오버레이는 데스크톱 앱에서 작동합니다.'
   };
   if(command==='action'&&args.name.startsWith('board')){previewState.board=args.name==='board'?({screen:'white',white:'black',black:'screen'}[previewState.board||'screen']):args.name.slice(6);previewState.drawing=true;previewState.visible=true;}
   if (command === 'snapshot') return structuredClone(previewState);
@@ -86,6 +91,8 @@ async function loadZoomImage(id){
  try{const png=await invoke('zoom_image',{id});const image=new Image();image.src=png;await image.decode();if(state?.zoom?.id===id){zoomImage=png;zoomImageId=id;schedulePaint();}}catch(e){if(state?.zoom?.id===id){error(e);await run('action',{name:'zoom_reset'});}}finally{if(zoomLoadingId===id)zoomLoadingId=null;}
 }
 function receive(next) {
+  applyTheme(next.preferences?.theme);
+  textEditor?.sync(next);
   if (draft && (!next.drawing || next.selected !== drawingMonitor || next.tool !== state?.tool)) cancelDraft();
   if(moveDraft&&(!next.drawing||next.selected!==drawingMonitor||next.tool!=='select'))cancelDraft();
   if(!moveDraft&&selectedIndex>=0&&(!next.drawing||next.tool!=='select'||next.selected!==state?.selected||JSON.stringify(next.strokes?.[selectedIndex])!==JSON.stringify(state?.strokes?.[selectedIndex])))selectedIndex=-1;
@@ -94,11 +101,11 @@ function receive(next) {
   const language=next.preferences?.language||'auto';
   if(language!==localeChoice){
     localeChoice=language;setLanguage(language);
-    document.title=t(view==='settings'?'LayerPen · 설정':view==='overlay'?'LayerPen · 필기':'LayerPen');
+    document.title=t(view==='settings'?'OnPen · 설정':view==='overlay'?'OnPen · 필기':'OnPen');
     if(native) native.window.getCurrentWindow().setTitle(document.title).catch(error);
   }
   if(view==='overlay')loadZoomImage(next.zoom?.id);
-  if (view === 'overlay') { document.body.classList.toggle('drawing',state.drawing&&state.visible!==false);document.body.classList.toggle('selecting',state.tool==='select'); schedulePaint(); }
+  if (view === 'overlay') { document.body.classList.toggle('drawing',state.drawing&&state.visible!==false);document.body.classList.toggle('selecting',state.tool==='select');document.body.classList.toggle('text-tool',state.tool==='text'); schedulePaint(); }
   else if (view === 'toolbar') updateToolbar();
   else if (view === 'settings') updateSettings();
   localization?.refresh();
@@ -107,16 +114,17 @@ function button(name, title, extra = '') { return `<button type="button" title="
 
 function mountToolbar() {
   root.innerHTML = `<div class="toolbar">
-    <span class="grip" title="도구막대 이동">⠿</span>${button('close','앱 종료','data-action="quit"')}
+    <span class="grip" title="도구막대 이동">⠿</span><button class="toolbar-brand" title="OnPen · 설정" aria-label="설정" data-action="settings">on</button>
     <div class="mode-group">${button('mouse','마우스 모드','id="mode"')}${button('eye','판서 숨기기','id="visibility"')}</div>
-    <div class="tool-group">${button('pen','펜','data-tool="pen"')}${button('marker','형광펜','data-tool="marker"')}${button('eraser','지우개','data-tool="eraser"')}${button('select','획 선택 / 이동 / 크기 (V)','data-tool="select"')}${button('line','직선','data-tool="line"')}${button('rectangle','사각형','data-tool="rectangle"')}${button('ellipse','원 / 타원','data-tool="ellipse"')}${button('fade','사라지는 잉크','data-tool="fade"')}${button('board','화면 / 화이트 / 블랙보드','id="board"')}${button('zoom','부분 확대','data-tool="zoom"')}${button('zoomReset','확대 종료','id="zoomReset"')}
+    <div class="tool-group">${button('pen','펜','data-tool="pen"')}${button('text','텍스트','data-tool="text"')}${button('marker','형광펜','data-tool="marker"')}${button('eraser','지우개','data-tool="eraser"')}${button('select','획 선택 / 이동 / 크기 (V)','data-tool="select"')}${button('line','직선','data-tool="line"')}${button('rectangle','사각형','data-tool="rectangle"')}${button('ellipse','원 / 타원','data-tool="ellipse"')}${button('fade','사라지는 잉크','data-tool="fade"')}${button('board','화면 / 화이트 / 블랙보드','id="board"')}${button('zoom','부분 확대','data-tool="zoom"')}${button('zoomReset','확대 종료','id="zoomReset"')}
     <div class="thickness-control"><button id="thickness" aria-label="굵기 선택" title="굵기 선택" aria-expanded="false" aria-controls="thicknessMenu"><span class="thickness-dot"></span><small>⌄</small></button><div id="thicknessMenu" hidden>${sizes('active',4)}</div></div></div>
     <div class="palette">${defaults.palette.map((c,i)=>`<button class="swatch" data-slot="${i}" data-color="${c}" style="--swatch:${c}" title="색상 ${c}" aria-label="색상 ${c}"></button>`).join('')}<label class="custom-color" title="자유색"><input type="color" id="customColor" aria-label="자유색" value="#8b5cf6"></label></div>
     <div class="history-group">${button('undo','실행 취소','data-action="undo" id="undo"')}${button('redo','다시 실행','data-action="redo" id="redo"')}</div>
     <div class="utility-group">${button('trash','현재 화면 필기 전체 지우기','id="clear"')}${button('settings','설정','data-action="settings"')}</div>
-    <div class="export-tools">${button('camera','스크린샷 캡처','id="capture"')}${button('gif','GIF 내보내기','id="gifExport"')}</div>
+    <div class="export-tools"><button type="button" id="captionOpen" title="실시간 자막" aria-label="실시간 자막">CC</button>${button('camera','스크린샷 캡처','id="capture"')}${button('gif','GIF 내보내기','id="gifExport"')}${button('close','앱 종료','data-action="quit" class="quit-app"')}</div>
     </div><div class="toolbar-caption"><span id="modeLabel"></span><span id="toolbarShortcut"></span></div>`;
   root.querySelector('.grip').addEventListener('pointerdown', () => { if(native) native.window.getCurrentWindow().startDragging().catch(error); });
+  root.querySelector('#captionOpen').onclick=()=>run('caption_open');
   root.querySelector('#mode').onclick = () => run('action',{name:'mouse'});
   root.querySelector('#zoomReset').onclick=()=>run('action',{name:'zoom_reset'});
   root.querySelector('#board').onclick=()=>run('action',{name:'board'});
@@ -131,7 +139,7 @@ function mountToolbar() {
   root.querySelectorAll('[data-tool]').forEach(el => el.onclick = async () => {
     if (!state) return;
     const p=preferences();
-    await run('set_tool',{tool:el.dataset.tool,color:state.color,width:el.dataset.tool === 'eraser' ? p.eraser_width : el.dataset.tool === 'marker' ? p.marker_width : p.pen_width});
+    await run('set_tool',{tool:el.dataset.tool,color:state.color,width:el.dataset.tool === 'text' && !['marker','eraser','zoom'].includes(state.tool) ? state.width : el.dataset.tool === 'eraser' ? p.eraser_width : el.dataset.tool === 'marker' ? p.marker_width : p.pen_width});
     if(!state.drawing) await run('action',{name:'toggle'});
   });
   root.querySelectorAll('[data-color]').forEach(el => el.onclick = () => state && run('set_tool',{tool:state.tool,color:el.dataset.color,width:state.width}));
@@ -154,6 +162,7 @@ function mountToolbar() {
 }
 function updateToolbar() {
   document.body.dataset.layout=preferences().layout;
+  document.body.dataset.lines=String(preferences().toolbar_lines);document.documentElement.style.setProperty('--toolbar-lines',preferences().toolbar_lines);
   root.querySelector('#board').classList.toggle('active',state.board==='white'||state.board==='black');root.querySelector('#board').disabled=state.capturing||!state.connected;root.querySelector('#board').title='보드 전환 · 현재 '+({white:'화이트보드',black:'블랙보드'}[state.board]||'화면');
   root.querySelector('#zoomReset').disabled=!state.zoom||state.capturing;
   root.querySelector('#mode').classList.toggle('active',!state.drawing);
@@ -175,16 +184,16 @@ function updateToolbar() {
   root.querySelector('#modeLabel').textContent = monitor ? `${!visible?'◌ 판서 숨김':state.tool==='zoom'&&state.drawing?'확대할 영역을 드래그':state.drawing ? '● 필기 중' : '○ 마우스 모드'}${state.zoom?' · x'+state.zoom.scale.toFixed(1):''} · ${monitor.name}` : '모니터 연결 끊김 · 설정에서 선택';
 }
 function mountSettings() {
-  root.innerHTML = `<div class="settings"><header><div class="logo">il<span>•</span></div><div><h1>LayerPen</h1><p>필요한 화면에만, 가볍게.</p></div><span class="version">v0.1.0</span></header>
+  root.innerHTML = `<div class="settings"><header><div class="logo">on<span>•</span></div><div><h1>OnPen</h1><p>필요한 화면에만, 가볍게.</p></div><span class="version">v0.1.0</span><button type="button" id="closeSettings" class="panel-close" title="닫기" aria-label="닫기">${icon('close')}</button></header>
   <section class="language-setting"><label for="language">언어</label><select id="language">${Object.entries(languages).map(([code,label])=>`<option value="${code}" ${code==='auto'?'':'data-i18n-skip'}>${code==='auto'?'시스템 언어':label}</option>`).join('')}</select><p class="hint">언어는 모든 창에 즉시 적용되며 다음 실행에도 유지됩니다.</p></section>
   <div class="section-heading"><div><span class="eyebrow">WORKSPACE</span><h2>필기할 모니터</h2></div><button id="identify" class="outline">${icon('monitor')} 화면 식별</button></div>
   <p class="description">선택한 화면에만 필기창이 표시됩니다.<br>다른 모니터는 평소처럼 사용할 수 있어요.</p>
   <div id="monitors" role="radiogroup" aria-label="필기할 모니터"></div>
   <div id="connection" class="connection"></div><p id="warning" class="warning" hidden></p>
-  <section class="preference-section"><h2>도구막대</h2><div class="setting-row"><span>방향</span><div class="segmented"><button data-layout="horizontal">가로</button><button data-layout="vertical">세로</button></div></div><p class="hint">도구막대의 점 무늬를 잡고 원하는 위치로 이동하세요.</p></section>
+  <section class="preference-section"><h2>도구막대</h2><div class="setting-row"><span>방향</span><div class="segmented"><button data-layout="horizontal">가로</button><button data-layout="vertical">세로</button></div></div><div class="setting-row"><span>줄 수</span><div class="segmented"><button data-lines="1">1줄</button><button data-lines="2">2줄</button><button data-lines="3">3줄</button></div></div><p class="hint">도구막대의 점 무늬를 잡고 원하는 위치로 이동하세요.</p></section>
   <section class="preference-section"><h2>색상 팔레트</h2><p class="hint">앞의 5칸은 자주 쓰는 색으로 설정하세요. 마지막 칸은 도구막대에서 자유색을 선택합니다.</p><div class="palette-settings">${defaults.palette.map((c,i)=>`<label class="preset-setting"><input type="color" data-preset="${i}" aria-label="기본 색상 ${i+1}" value="${c}"><span>색상 ${i+1}</span></label>`).join('')}<div class="preset-setting picker-info"><span class="picker-sample"></span><span>자유색 · 컬러 피커</span></div></div></section>
   <section class="preference-section"><h2>필기 도구</h2>${[['pen_width','펜 · 도형'],['marker_width','형광펜'],['eraser_width','지우개']].map(([key,label])=>`<div class="setting-row"><span>${label} 기본 굵기</span>${sizes(key,defaults[key])}</div>`).join('')}
-  <div class="setting-row"><label for="opacity">형광펜 불투명도</label><div class="range-value"><input id="opacity" type="range" min="10" max="80" step="5"><output id="opacityValue"></output></div></div></section>
+  <div class="setting-row"><label for="textFont">텍스트 글꼴</label><select id="textFont" aria-label="텍스트 글꼴"><option value="Malgun Gothic">Malgun Gothic</option></select></div><div class="font-actions"><button type="button" id="importFont" class="outline">TTF 파일 추가</button><span id="fontStatus" class="hint" role="status"></span></div><p class="hint">시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다. 글자 크기는 펜 굵기 5단계에 따라 16·24·40·72·104px입니다. 입력 중 Enter는 완료, Shift+Enter는 줄바꿈, Escape는 취소입니다.</p><div class="setting-row"><label for="opacity">형광펜 불투명도</label><div class="range-value"><input id="opacity" type="range" min="10" max="80" step="5"><output id="opacityValue"></output></div></div></section>
   <section class="preference-section"><h2>스크린샷</h2><label class="check-row"><input type="checkbox" id="layerOnly"> 필기 레이어만 캡처</label><p class="hint">기본값은 선택한 화면 + 필기입니다. 레이어만 저장하면 배경이 투명한 PNG가 만들어집니다.</p><label class="field-label" for="captureDir">기본 저장 위치</label><div class="folder-row"><input id="captureDir" readonly aria-label="기본 저장 위치"><button class="outline" id="chooseFolder">폴더 선택</button></div><p class="hint">파일명은 날짜·시간으로 자동 생성됩니다.<br><span id="filenameSample"></span></p><button class="outline" id="captureNow">${icon('camera')} 지금 캡처</button><p class="hint" id="lastCapture" role="status"></p></section>
   <section class="preference-section"><h2>부분 확대 + 판서</h2><p class="hint">돋보기로 영역을 드래그하면 현재 화면을 멈춰 최대 x6까지 확대합니다. 클릭만 하면 x2로 확대합니다. 확대 종료 버튼 또는 마우스 모드로 원래 화면에 돌아갑니다.</p><p class="hint">선택한 굵기는 확대 화면에서 보이는 굵기입니다. x2에서 굵기 8로 그리면 원래 화면에는 굵기 4로 남습니다. PNG는 현재 확대 영역을, GIF는 원래 화면 좌표 전체를 사용합니다. 화면 이동·동영상은 확대 중 갱신되지 않습니다.</p></section>
   <section class="preference-section"><h2>보드와 강조</h2><div class="setting-row"><span>판서 배경</span><div class="segmented"><button data-board="screen">화면</button><button data-board="white">화이트</button><button data-board="black">블랙</button></div></div><p class="hint">배경을 바꿔도 판서는 유지됩니다. 마우스 모드에서는 보드 배경을 내리고, 다시 필기하면 복원합니다.</p><div class="setting-row"><label for="fadeSeconds">강조 잉크 유지 시간</label><select id="fadeSeconds">${[1,2,3,5,10].map(n=>`<option value="${n}">${n}초</option>`).join('')}</select></div><p class="hint">펜을 뗀 뒤 지정한 시간 동안 보이다가 사라집니다. 일반 판서의 선택·실행 취소와 분리하며, GIF에는 강조와 사라지는 과정이 포함됩니다.</p></section>
@@ -198,10 +207,23 @@ function mountSettings() {
   <p class="hint">Escape는 언제나 마우스 모드로 돌아갑니다. 크기 조절 중 Shift는 비율 유지에 사용됩니다.</p></section>
   <section class="shortcut-card"><div class="shortcut-icon">${icon('pen')}</div><div><h3>필기와 작업 사이, 단축키 하나</h3><p>필기를 남겨두고 아래 프로그램을 조작하세요.</p></div><kbd id="shortcut"></kbd></section>
   <footer><span class="status-dot"></span><span id="saved">선택한 모니터를 자동으로 기억합니다</span><button id="quit" class="text-button">앱 종료</button></footer></div>`;
+  const themeEntry=document.createElement('section');themeEntry.className='language-setting';
+  themeEntry.innerHTML=`<label for="theme">테마 색상</label><select id="theme">${Object.entries(themes).map(([id,theme])=>`<option value="${id}">${theme.label}</option>`).join('')}</select><p class="hint">앱의 색상을 변경합니다. 펜 색상은 그대로 유지됩니다.</p>`;
+  root.querySelector('.language-setting').after(themeEntry);
+  const captionEntry=document.createElement('button');
+  captionEntry.type='button';captionEntry.className='outline';captionEntry.textContent='CC · Live captions · 실시간 자막';
+  captionEntry.onclick=()=>run('caption_open');
+  root.querySelector('.language-setting').after(captionEntry);
+  root.querySelector('#closeSettings').onclick=()=>run('action',{name:'settings'});
   root.querySelector('#identify').onclick=()=>run('identify');
   root.querySelector('#quit').onclick=()=>run('action',{name:'quit'});
   const update=async patch=>{const result=await run('configure',{preferences:{...preferences(),...patch}});if(result!==null)root.querySelector('#saved').textContent='저장됨 · 다음 실행에도 유지됩니다';else updateSettings();};
+  root.querySelector('#theme').onchange=event=>update({theme:event.target.value});
   root.querySelector('#language').onchange=event=>update({language:event.target.value});
+  root.querySelector('#textFont').onchange=event=>update({text_font:event.target.value});
+  refreshFonts();
+  root.querySelector('#importFont').onclick=async()=>{const button=root.querySelector('#importFont');button.disabled=true;try{if(!native){error('데스크톱 앱으로 실행하세요.');return;}const font=await invoke('import_font');if(font){await refreshFonts();await update({text_font:font.family});}}catch(e){error(e);}finally{button.disabled=false;}};
+  root.querySelectorAll('[data-lines]').forEach(el=>el.onclick=()=>update({toolbar_lines:Number(el.dataset.lines)}));
   root.querySelectorAll('[data-preset]').forEach(el=>el.onchange=()=>{const palette=[...preferences().palette];palette[Number(el.dataset.preset)]=el.value;update({palette});});
   root.querySelectorAll('[data-layout]').forEach(el=>el.onclick=()=>update({layout:el.dataset.layout}));
   root.querySelectorAll('[data-size-group]').forEach(group=>group.querySelectorAll('[data-size]').forEach(el=>el.onclick=()=>update({[group.dataset.sizeGroup]:Number(el.dataset.size)})));
@@ -226,10 +248,19 @@ function mountSettings() {
   root.querySelector('#captureNow').onclick=()=>run('request_capture');
   root.querySelector('#filenameSample').textContent=new Date().toLocaleDateString('sv-SE')+'_'+new Date().toTimeString().slice(0,8).replaceAll(':','-')+'.png';
 }
+async function refreshFonts(){try{const {system,assets}=await fontChoices();const select=root.querySelector('#textFont');if(!select)return;
+ const selected=preferences().text_font;const options=system.map(name=>new Option(name,name));
+ for(const font of assets)options.push(new Option(font.name+' · TTF',font.family));
+ if(!options.some(option=>option.value===selected))options.unshift(new Option(selected,selected));select.replaceChildren(...options);select.value=selected;
+ root.querySelector('#fontStatus').textContent=`${system.length} + ${assets.length} TTF`;
+ }catch(e){error(e);}}
 let monitorSignature = '';
 function updateSettings() {
   const p=preferences();
   root.querySelector('#language').value=p.language;
+  root.querySelectorAll('[data-lines]').forEach(el=>{el.classList.toggle('active',Number(el.dataset.lines)===p.toolbar_lines);el.setAttribute('aria-pressed',String(Number(el.dataset.lines)===p.toolbar_lines));});
+  root.querySelector('#theme').value=p.theme;
+  if(document.activeElement!==root.querySelector('#textFont'))root.querySelector('#textFont').value=p.text_font;
   root.querySelector('#fadeSeconds').value=p.fade_seconds;root.querySelectorAll('[data-board]').forEach(el=>{el.classList.toggle('active',el.dataset.board===(state.board||'screen'));el.disabled=state.capturing||!state.connected;});
   root.querySelectorAll('[data-preset]').forEach(el=>{el.value=p.palette[Number(el.dataset.preset)];});
   root.querySelectorAll('[data-layout]').forEach(el=>{el.classList.toggle('active',el.dataset.layout===p.layout);el.setAttribute('aria-pressed',String(el.dataset.layout===p.layout));});
@@ -278,7 +309,7 @@ function schedulePaint() {
   if(state?.visible!==false&&fading.length)schedulePaint();
  });
 }
-function cancelDraft() { zoomRegion=null;draft=null;moveDraft=null;selectedIndex=-1;pointer=null;drawingMonitor=null;if(view==='overlay')schedulePaint(); }
+function cancelDraft() { textEditor?.cancel();zoomRegion=null;draft=null;moveDraft=null;selectedIndex=-1;pointer=null;drawingMonitor=null;if(view==='overlay')schedulePaint(); }
 function updateTransform(move,event){
  const point=inputPoint(event),dx=point.x-move.start.x,dy=point.y-move.start.y;
  if(move.handle){const b=strokeBounds(move.before);move.target={x:(move.handle.endsWith('e')?b.maxX:b.minX)+dx,y:(move.handle.startsWith('s')?b.maxY:b.minY)+dy};move.after=resizeStroke(move.before,move.handle,move.target.x,move.target.y,event.shiftKey,innerWidth,innerHeight);}
@@ -287,7 +318,10 @@ function updateTransform(move,event){
 function mountOverlay() {
   root.innerHTML='<canvas aria-label="화면 필기 영역"></canvas><div class="drawing-edge"></div><div class="zoom-region" hidden></div><div class="selection-box" hidden><span class="resize-handle" data-handle="nw" title="크기 조절 · Shift: 비율 유지"></span><span class="resize-handle" data-handle="ne" title="크기 조절 · Shift: 비율 유지"></span><span class="resize-handle" data-handle="sw" title="크기 조절 · Shift: 비율 유지"></span><span class="resize-handle" data-handle="se" title="크기 조절 · Shift: 비율 유지"></span></div>';
   const canvas=root.querySelector('canvas');
+  textEditor=createTextEditor({root,getState:()=>state,invoke,error,refresh:async()=>receive(await invoke('snapshot'))});
   root.onpointerdown=event=>{
+    if(event.target.closest('.text-editor'))return;
+    if(state?.tool==='text'&&state.drawing&&!committing&&event.button===0){event.preventDefault();textEditor.begin(event);return;}
     if(!state?.drawing||pointer!==null||committing||event.button!==0)return;
     if(activeZoom(state)&&zoomImageId!==state.zoom.id)return;
     pointer=event.pointerId;drawingMonitor=state.selected;gestureStart=performance.now();
@@ -348,9 +382,10 @@ async function startGif(){
  if(!native){error('GIF 저장은 데스크톱 앱에서 사용할 수 있습니다.');return;}
  gifRunning=true;gifCancelled=false;const initial=structuredClone(state);initial.preferences=preferences();
  const report=text=>{if(view==='settings')root.querySelector('#gifProgress').textContent=text;else{const el=root.querySelector('#gifExport');el.title=t('{value} · 클릭하면 취소').replace('{value}',t(text));root.querySelector('#modeLabel').textContent=text;}};
- try{const path=await exportGif({invoke,state:initial,onProgress:p=>report(`GIF 저장 ${p}%`),cancelled:()=>gifCancelled});report('저장됨: '+path);error('GIF 저장 완료');}catch(e){report(e instanceof Error?e.message:String(e));error(e);}finally{gifRunning=false;receive(await invoke('snapshot'));}
+ try{await ensureFonts();const path=await exportGif({invoke,state:initial,onProgress:p=>report(`GIF 저장 ${p}%`),cancelled:()=>gifCancelled});report('저장됨: '+path);error('GIF 저장 완료');}catch(e){report(e instanceof Error?e.message:String(e));error(e);}finally{gifRunning=false;receive(await invoke('snapshot'));}
 }
 document.addEventListener('keydown',event=>{
+ if(view==='settings'&&event.key==='Escape'&&!event.target.closest('input,select,textarea')){event.preventDefault();run('action',{name:'settings'});return;}
  if(event.target.closest('input,select,textarea')||view==='settings'||event.repeat)return;
  if(event.key==='Escape'){event.preventDefault();cancelDraft();run('action',{name:'mouse'});return;}
  if(!preferences().tool_shortcuts||state?.capturing)return;
@@ -370,19 +405,21 @@ document.addEventListener('keydown',event=>{
 });
 async function start() {
   await loadLanguages();
+  try{await ensureFonts();}catch(e){error(e);}
   localization=localizeDocument();
   if(view==='identify'){
-    if(native){const snapshot=await invoke('snapshot');setLanguage(snapshot.preferences?.language||'auto');await native.window.getCurrentWindow().setTitle(t('LayerPen · 화면 식별'));}
+    if(native){const snapshot=await invoke('snapshot');setLanguage(snapshot.preferences?.language||'auto');applyTheme(snapshot.preferences?.theme);await native.window.getCurrentWindow().setTitle(t('OnPen · 화면 식별'));}
     root.innerHTML='<div class="identify-number"></div>';root.firstChild.textContent=params.get('number')||'1';return;
   }
-  if(!native&&params.get('preview')!=='1') {root.innerHTML='<div class="launch-message"><h1>LayerPen</h1><p>이 화면은 데스크톱 앱에서 실행해야 합니다.</p><p>README의 실행 방법을 확인하세요.</p></div>';return;}
+  if(!native&&params.get('preview')!=='1') {root.innerHTML='<div class="launch-message"><h1>OnPen</h1><p>이 화면은 데스크톱 앱에서 실행해야 합니다.</p><p>README의 실행 방법을 확인하세요.</p></div>';return;}
   if(view==='toolbar')mountToolbar();else if(view==='overlay')mountOverlay();else mountSettings();
   if(native){
+    await native.event.listen('fonts-changed',async()=>{try{await ensureFonts();if(view==='settings')await refreshFonts();schedulePaint();}catch(e){error(e);}});
     await native.event.listen('session',event=>receive(event.payload));
     await native.event.listen('capture-saved',event=>{if(view==='toolbar')error('캡처 저장됨');if(view==='settings')root.querySelector('#lastCapture').textContent=t('저장됨: {value}').replace('{value}',event.payload);});
     await native.event.listen('capture-error',event=>error(event.payload));
     if(view==='overlay')await native.event.listen('capture-request',async()=>{
-      try{cancelDraft();receive(await invoke('snapshot'));const canvas=root.querySelector('canvas');redraw(canvas,state.visible===false?[]:[...(state.strokes||[]),...visibleFading(state.fading)],null,devicePixelRatio,activeZoom(state));await invoke('save_capture',{monitor:state.selected,png:exportLayer(canvas,[...(state.strokes||[]),...visibleFading(state.fading)],activeZoom(state))});}catch(e){await run('cancel_capture',{message:String(e)});}
+      try{await ensureFonts();await textEditor?.finish();cancelDraft();receive(await invoke('snapshot'));const canvas=root.querySelector('canvas');redraw(canvas,state.visible===false?[]:[...(state.strokes||[]),...visibleFading(state.fading)],null,devicePixelRatio,activeZoom(state));await invoke('save_capture',{monitor:state.selected,png:exportLayer(canvas,[...(state.strokes||[]),...visibleFading(state.fading)],activeZoom(state))});}catch(e){await run('cancel_capture',{message:String(e)});}
     });
   }
   const next=await invoke('snapshot');receive(next);

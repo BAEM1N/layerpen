@@ -1,12 +1,16 @@
-# LayerPen
+# OnPen
 
 **Draw over your screen. Keep the conversation moving.**
 
-LayerPen is a free, open-source desktop annotation overlay for screen sharing, live demos, and teaching. Pick one monitor, draw over the apps you already use, then switch back to clicking without losing your annotations.
+OnPen is a free, open-source desktop annotation overlay for screen sharing, live demos, and teaching. Pick one monitor, draw over the apps you already use, then switch back to clicking without losing your annotations.
 
-Built with **Tauri 2, Rust, and plain JavaScript**. Previously named Monitor Ink.
+Built with **Tauri 2, Rust, and plain JavaScript**. Previously named LayerPen / Monitor Ink. The repository URL and internal app identifier stay unchanged for compatibility.
 
 [日本語](docs/README.ja.md) · [简体中文](docs/README.zh-CN.md) · [한국어 사용 안내](docs/USER-GUIDE.ko.md) · [Getting started](docs/GETTING-STARTED.md) · [Changelog](docs/CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)
+
+## v0.1 refresh
+
+OnPen adds selectable app themes, click-to-type text with configurable fonts, six toolbar layouts (horizontal/vertical × 1/2/3 lines), installed font selection and TTF import, and a settings panel that docks beside it. Experimental live captions support microphone/device selection and optional local acceleration. See [STT setup](docs/STT-SETUP.md); Python dependencies and model weights are downloaded separately. Cloud provider integration has not been verified with real API credentials. macOS validation and Apple Silicon acceleration are planned for v0.2.
 
 ## What you can do
 
@@ -19,7 +23,7 @@ Built with **Tauri 2, Rust, and plain JavaScript**. Previously named Monitor Ink
 - Use a whiteboard, blackboard, or fading ink for temporary emphasis.
 - Export a PNG of the screen with ink, a transparent ink layer, or a GIF replay of your annotation sequence.
 
-No account, subscription, or application-operated cloud service is required. The current application has no analytics integration. Windows WebView2 and installer downloads are separate runtime components.
+Drawing and local captions need no service account. Optional cloud captions require the chosen provider’s API key and may incur charges. The current application has no analytics integration. Windows WebView2 and installer downloads are separate runtime components.
 
 ## Status and supported platforms
 
@@ -34,9 +38,9 @@ The UI supports **English, 한국어, 日本語, and 简体中文**. Choose a la
 
 ## Get started
 
-Watch the [36-second product introduction](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/LayerPen-intro-v0.1.0.mp4). Its editable [Remotion source](video/README.md) and [MacBook handoff guide](docs/HANDOFF-MACBOOK.ko.md) are included.
+Watch the updated OnPen [36-second product introduction](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/OnPen-intro-v0.1.0.mp4). Its editable [Remotion source](video/README.md) and [MacBook handoff guide](docs/HANDOFF-MACBOOK.ko.md) are included.
 
-Download the [Windows installer](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/LayerPen_0.1.0_x64-setup.exe) or [portable ZIP](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/LayerPen-0.1.0-windows-x64-portable.zip) from [GitHub Releases](https://github.com/BAEM1N/layerpen/releases). The portable edition contains `LayerPen.exe`; no build tools are needed. Close older copies before launching.
+Download the [Windows installer](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/OnPen_0.1.0_x64-setup.exe) or [portable ZIP](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/OnPen-0.1.0-windows-x64-portable.zip) from [GitHub Releases](https://github.com/BAEM1N/layerpen/releases). The portable edition contains `OnPen.exe`; no build tools are needed. Close older copies before launching.
 
 This is **v0.1.0, the first public release**. Earlier local development builds used a separate version sequence.
 
@@ -45,7 +49,7 @@ This is **v0.1.0, the first public release**. Earlier local development builds u
 3. Select the cursor icon to interact with the underlying app, or press **Ctrl+Shift+D** to toggle drawing/mouse mode.
 4. Export anything you want to keep before closing the app.
 
-For an online meeting, start with **sharing the entire selected monitor**, then confirm that another participant can see the ink. Sharing only an application window or browser tab may omit the overlay. Zoom, Teams, and Meet compatibility has **not yet been verified end to end**. LayerPen does not control screen sharing and is not a remote collaborative whiteboard.
+For an online meeting, start with **sharing the entire selected monitor**, then confirm that another participant can see the ink. Sharing only an application window or browser tab may omit the overlay. Zoom, Teams, and Meet compatibility has **not yet been verified end to end**. OnPen does not control screen sharing and is not a remote collaborative whiteboard.
 
 ## Important behavior
 
@@ -74,7 +78,7 @@ Create a Windows NSIS installer on Windows:
 npm run installer:windows
 ```
 
-The default output is `src-tauri/target/release/bundle/nsis/`. `CARGO_TARGET_DIR` overrides the target directory. The native binary is still named `monitor-ink` for compatibility with existing development scripts; product windows and newly built installers use LayerPen. The legacy application identifier, settings paths and `MONITOR_INK_DATA_DIR` override are intentionally retained.
+The default output is `src-tauri/target/release/bundle/nsis/`. `CARGO_TARGET_DIR` overrides the target directory. The native binary is `onpen`. New settings use the OnPen config folder, with migration from the legacy identifier. `ONPEN_DATA_DIR` overrides the profile directory. Legacy environment variable names remain readable for upgrades.
 
 ## Repository layout
 

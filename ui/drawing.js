@@ -1,4 +1,5 @@
 import { hits } from './hit-test.js';
+import {paintText} from './text.js';
 export function normalizedPoint(x, y, width, height) {
   return { x: Math.max(0, Math.min(1, x / Math.max(1, width))), y: Math.max(0, Math.min(1, y / Math.max(1, height))) };
 }
@@ -17,7 +18,9 @@ export function paintStroke(ctx, stroke, width, height) {
   const first = stroke.points[0];
   ctx.beginPath();
   const last = stroke.points.at(-1);
-  if (stroke.tool === 'rectangle') {
+  if (stroke.tool === 'text') {
+    paintText(ctx,stroke,width,height);
+  } else if (stroke.tool === 'rectangle') {
     ctx.rect(Math.min(first.x,last.x)*width,Math.min(first.y,last.y)*height,Math.abs(last.x-first.x)*width,Math.abs(last.y-first.y)*height);ctx.stroke();
   } else if (stroke.tool === 'ellipse') {
     ctx.ellipse((first.x+last.x)*width/2,(first.y+last.y)*height/2,Math.abs(last.x-first.x)*width/2,Math.abs(last.y-first.y)*height/2,0,0,Math.PI*2);ctx.stroke();
