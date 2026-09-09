@@ -1,10 +1,14 @@
-# Pointory(포인토리) v0.2 Mac 검증 준비
+# Pointory(포인토리) v0.2 Mac 검증과 인계
 
 현재 제품명은 **Pointory(포인토리)**이며 저장소는 [BAEM1N/pointory](https://github.com/BAEM1N/pointory)입니다. 처음 받을 때는 `git clone https://github.com/BAEM1N/pointory.git` 후 `cd pointory`로 이동합니다. Rust 패키지/바이너리는 `pointory`, 내부 앱 식별자는 업그레이드 호환을 위해 `dev.personal.monitorink`를 유지합니다. 기본 저장 폴더는 Pictures/Pointory이며 `POINTORY_DATA_DIR`를 우선 사용합니다. 이전 환경변수와 설정은 호환됩니다.
 
 `pointory.app`은 우선 도메인 후보이며 아직 구매·DNS 연결·사이트 배포를 하지 않았습니다.
 
-현재 Windows v0.1 갱신: 테마 5종, 텍스트, 도킹 설정, 실시간 자막 실험 기능. Mac에서 빌드가 통과해도 화면 필기·마이크·GPU/ANE 실행은 별도 검증해야 합니다.
+2026-09-10에 M4 Mac mini(macOS 26.2, 16 GB, 단일 1920×1080·배율 1)에서 재부팅 전 네이티브 WKWebView 시나리오 9개를 검증했습니다. 툴바·설정·텍스트·투명 PNG·GIF·밝기 스포트라이트·로컬 공유 제어와 메뉴 막대 아래로 밀리던 창 위치 수정이 포함됩니다. 최신 자동 검사는 Rust 39개·JavaScript 29개·STT 18개, 합계 86개 통과입니다. Rust는 Mac·Windows에서 각각 통과했고 수동 fixture 1개는 제외합니다. [구체적인 방법과 결과](validation/0.2-macos.ko.md)를 먼저 확인하세요.
+
+새 설정 글꼴·크기는 브라우저 40조합(4언어 × 5크기 × 2너비)과 한국어·영어 FontFace 로드를 검증했습니다. 최신 메인 스레드 잠금 수정까지 포함한 일반 arm64 `.app`·DMG 빌드, 체크섬·읽기 전용 마운트·내용, ad hoc 리소스 서명 검사가 모두 통과했고 Windows NSIS 최종 빌드도 완료했습니다. 재부팅 후 로그인된 데스크톱 세션이 없어 새 Mac 설정 시나리오와 최신 앱의 실제 설치·재실행은 미검증입니다.
+
+화면 기록 권한은 아직 미승인이며 실제 마이크 입력 장치가 없어 전체 화면 캡처·음성 인식 검증은 남아 있습니다. 현재 Mac 시스템 오디오 경로는 지원하지 않고 Apple GPU/ANE도 미구현입니다. 개발용 ad hoc 서명·DMG 빌드가 Developer ID 서명·공증·스토어 배포 완료를 뜻하지 않습니다.
 
 ## SSH로 준비할 것
 - Mac 주소(IP 또는 VPN 호스트), 사용자명, 포트(기본 22), 작업할 폴더.
@@ -16,7 +20,8 @@ SSH로 소스 수정·빌드·자동 테스트는 가능하지만 GUI 실행 확
 
 Xcode Command Line Tools, Rust, Node, Python 환경은 접속 후 확인하고 준비합니다. Apple ID/개발자 인증서는 로컬 기능 검증을 시작하는 데 필요하지 않습니다. 서명·공증·스토어 제출은 별도 배포 단계입니다.
 
-## v0.2 실제 검증
+## v0.2 남은 실제 검증
+- 로그인된 데스크톱에서 최신 앱 재실행, 설정 글꼴·12~20px 크기 변경과 저장 확인.
 - Retina/다중 모니터/음수 좌표, 툴바 이동과 설정 도킹, 화면 캡처 권한.
 - 한글 IME·글꼴·텍스트 크기, 전역 단축키·클릭 통과, 전체화면 앱과 Spaces.
 - 마이크 선택·중지·다시 시작, 시스템 오디오 지원 경로.
@@ -86,4 +91,3 @@ npm run render
 2026-09-08 v0.1.0 릴리즈 업로드와 36초 소개 영상 렌더링을 완료했습니다. 릴리즈 태그는 `d661f9c54fd054cb17bf90ff487d227f823d18de`입니다. 초기 CI에서 Windows/macOS 테스트·빌드는 통과했고 Linux는 `-lgbm` 링크 실패가 확인되어 main의 CI 설치 목록에 `libgbm-dev`를 추가했습니다. 최신 CI 결과는 Actions에서 확인하세요. 이는 macOS 실제 실행 검증을 대신하지 않습니다.
 
 테스트·빌드 캐시, 개인 화면 캡처, 과거 세션 자료는 Git에 포함하지 않습니다. 배포 산출물은 GitHub Releases로 전달하고 실행 파일을 소스 트리에 넣지 않습니다. `docs/validation/0.1.0.ko.md`에 로컬 검증 범위가 있습니다. CI 성공 여부와 실제 macOS 사용 가능 여부는 별도로 확인하세요.
-

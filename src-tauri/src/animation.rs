@@ -224,6 +224,7 @@ pub(crate) fn capture_background(
     width: u16,
     height: u16,
 ) -> Result<String> {
+    capture::ensure_capture_permission()?;
     let mut windows = Vec::new();
     for label in ["overlay", "toolbar", "settings"] {
         let w = app
@@ -237,11 +238,7 @@ pub(crate) fn capture_background(
             w.hide().map_err(|e| e.to_string())?;
         }
         std::thread::sleep(Duration::from_millis(300));
-        let target = xcap::Monitor::all()
-            .map_err(|e| e.to_string())?
-            .into_iter()
-            .find(|m| m.x().ok() == Some(display.x) && m.y().ok() == Some(display.y))
-            .ok_or("선택한 화면을 캡처할 수 없습니다.")?;
+        let target = capture::monitor_for_display(display)?;
         let image = target
             .capture_image()
             .map_err(|e| format!("화면 캡처 실패: {e}"))?;

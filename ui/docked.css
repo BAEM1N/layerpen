@@ -8,3 +8,25 @@ body[data-view=settings]{border:1px solid hsl(var(--theme-hue,212) 18% 30%);bord
 .font-actions{display:flex;gap:12px;align-items:center;margin:10px 0 14px}.font-actions .hint{margin:0}.settings #textFont{font:inherit;font-size:12px;width:260px;max-width:65%;padding:9px}
 
 .settings .logo{padding:0;border:0;background:none}.settings .logo img{display:block;width:100%;height:100%;border-radius:inherit}
+
+/* Settings typography is independent of toolbar icons and canvas text sizes. */
+body[data-view=settings]{font-family:var(--settings-font-family),Inter,"Segoe UI","Noto Sans","Noto Sans CJK JP","Noto Sans CJK SC","Yu Gothic","Microsoft YaHei","Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:var(--settings-font-size,14px);line-height:1.5}
+.settings :is(button,input,select,textarea,kbd){font-family:inherit}
+.settings :is(.setting-row,.segmented button,.outline,.check-row,.preset-setting,.keymap-row,.monitor-copy strong),.settings #textFont{font-size:var(--settings-font-size,14px)}
+.settings :is(.hint,.description,.connection,.warning,.field-label,.folder-row input,.key-input,.monitor-copy small,.range-value output,.shortcut-card h3),body[data-view=settings] #toast{font-size:calc(var(--settings-font-size,14px) * .857143)}
+.settings :is(header p,.version,.eyebrow,.keymap-row small,.shortcut-card p,.shortcut-card kbd,footer,.text-button){font-size:calc(var(--settings-font-size,14px) * .785714)}
+.settings h1{font-size:calc(var(--settings-font-size,14px) * 1.428571)}
+.settings h2{font-size:calc(var(--settings-font-size,14px) * 1.5)}
+.settings .preference-section h2{font-size:calc(var(--settings-font-size,14px) * 1.071429)}
+.settings header>div:not(.logo){min-width:0}.settings header p{overflow-wrap:anywhere}
+.settings :is(.section-heading,.setting-row,.font-actions,.shortcut-card,footer){flex-wrap:wrap}
+.settings .section-heading{gap:12px}.settings .setting-row>label,.settings .setting-row>span{flex:1;min-width:min(100%,8em)}
+.settings .setting-row select{min-width:0;max-width:100%}.settings #textFont{width:260px;max-width:100%}
+.settings .segmented{max-width:100%;flex-wrap:wrap}.settings .segmented button{padding:.5em .85em}
+.settings .range-value{max-width:100%}.settings .range-value input{min-width:0}.settings .range-value output{width:auto;min-width:3em}
+.settings .monitor-copy{min-width:0}.settings .monitor-copy strong{overflow-wrap:anywhere}.settings :is(.display-picture,.selection-dot,.status-dot){flex-shrink:0}
+.settings .keymap-row{grid-template-columns:minmax(0,1fr) minmax(6em,9em) 36px}
+.settings .preset-setting{min-width:0;flex-wrap:wrap}.settings .preset-setting input,.settings .picker-sample{flex-shrink:0}
+.settings .preference-section>label:not(.check-row):not(.field-label){display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:14px 0}
+.settings .shortcut-card kbd{max-width:100%;white-space:normal;overflow-wrap:anywhere}.settings .font-actions .outline{flex-shrink:0}
+@media(max-width:420px){.settings .keymap-row{grid-template-columns:minmax(0,1fr) minmax(5em,7em) 36px}.settings .language-setting{grid-template-columns:minmax(0,1fr) minmax(0,auto)}}

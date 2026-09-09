@@ -91,10 +91,10 @@ pub async fn share_add(app:tauri::AppHandle)->Result<()> {
 #[tauri::command]
 pub fn share_remove(id:String,state:tauri::State<ShareState>)->Result<()> {state.files.lock().map_err(|e|e.to_string())?.remove(&id);Ok(())}
 #[tauri::command]
-pub async fn share_open(app:tauri::AppHandle)->Result<()> {if let Some(w)=app.get_webview_window("sharing"){w.show().map_err(|e|e.to_string())?;w.set_focus().map_err(|e|e.to_string())?;}else{WebviewWindowBuilder::new(&app,"sharing",WebviewUrl::App("sharing.html".into())).title("Pointory · 자료 공유 / Share materials").inner_size(540.,740.).build().map_err(|e|e.to_string())?;}Ok(())}
+pub async fn share_open(app:tauri::AppHandle)->Result<()> {if let Some(w)=app.get_webview_window("sharing"){super::macos::set_level(&w)?;w.show().map_err(|e|e.to_string())?;w.set_focus().map_err(|e|e.to_string())?;}else{let w=WebviewWindowBuilder::new(&app,"sharing",WebviewUrl::App("sharing.html".into())).title("Pointory · 자료 공유 / Share materials").inner_size(540.,740.).build().map_err(|e|e.to_string())?;super::macos::set_level(&w)?;}Ok(())}
 
 #[tauri::command]
-pub fn share_live(app:tauri::AppHandle,enabled:bool)->Result<()> {
+pub async fn share_live(app:tauri::AppHandle,enabled:bool)->Result<()> {
  let share=app.state::<ShareState>();share.live.stop();share.live.error.lock().unwrap().clear();
  if !enabled{return Ok(());}
  if share.server.lock().unwrap().is_none(){return Err("Start sharing first · 먼저 자료 공유를 시작하세요.".into());}
@@ -102,7 +102,8 @@ pub fn share_live(app:tauri::AppHandle,enabled:bool)->Result<()> {
  let live=share.live.clone();let generation=live.generation.load(Ordering::SeqCst);live.enabled.store(true,Ordering::SeqCst);
  std::thread::spawn(move||{
   let result=(||->Result<()>{
-   let monitor=xcap::Monitor::all().map_err(|e|e.to_string())?.into_iter().find(|m|m.x().ok()==Some(display.x)&&m.y().ok()==Some(display.y)).ok_or("Selected monitor unavailable")?;
+   super::capture::ensure_capture_permission()?;
+   let monitor=super::capture::monitor_for_display(&display)?;
    while live.enabled.load(Ordering::SeqCst)&&live.generation.load(Ordering::SeqCst)==generation {
     let selected=app.state::<super::Shared>().lock().map_err(|e|e.to_string())?.selected().map(|d|d.id.clone());
     if selected.as_deref()!=Some(&display.id){return Err("Monitor changed. Restart live view · 모니터 변경: 화면 공유를 다시 켜세요.".into());}

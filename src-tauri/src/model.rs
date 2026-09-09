@@ -433,6 +433,7 @@ fn valid_chord(chord: &str) -> bool {
 pub struct Preferences {
     pub language: String,
     pub text_font: String,
+    pub settings_font_size: u8,
     pub theme: String,
     pub monitor: Option<String>,
     pub layout: String,
@@ -460,6 +461,7 @@ impl Default for Preferences {
         Self {
             language: "auto".into(),
             text_font: "Malgun Gothic".into(),
+            settings_font_size: 14,
             theme: "blue".into(),
             monitor: None,
             layout: "horizontal".into(),
@@ -504,6 +506,7 @@ impl Preferences {
         matches!(self.language.as_str(), "auto" | "ko" | "en" | "ja" | "zh-CN")
             && matches!(self.theme.as_str(), "blue" | "teal" | "green" | "orange" | "purple")
             && valid_font(&self.text_font)
+            && [12, 14, 16, 18, 20].contains(&self.settings_font_size)
             && (1..=10).contains(&self.fade_seconds)
             && self.spotlight_radius.is_finite() && (40.0..=300.0).contains(&self.spotlight_radius)
             && self.spotlight_dim.is_finite() && (0.1..=0.9).contains(&self.spotlight_dim)
@@ -685,6 +688,20 @@ impl Session {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn settings_text_size_migrates_and_persists_independently_of_pen_width() {
+        let mut prefs: super::Preferences = serde_json::from_str(r#"{"pen_width":8}"#).unwrap();
+        assert_eq!(prefs.settings_font_size, 14);
+        for size in [12, 14, 16, 18, 20] {
+            prefs.settings_font_size = size;
+            assert!(prefs.valid());
+            let loaded: super::Preferences = serde_json::from_str(&serde_json::to_string(&prefs).unwrap()).unwrap();
+            assert_eq!(loaded.settings_font_size, size);
+            assert_eq!(loaded.pen_width, 8.);
+        }
+        prefs.settings_font_size = 255;
+        assert!(!prefs.valid());
+    }
     #[test]
     fn theme_preferences_migrate_and_roundtrip_without_changing_ink() {
         let mut prefs: super::Preferences = serde_json::from_str("{}").unwrap();

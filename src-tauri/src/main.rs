@@ -9,6 +9,9 @@ mod capture;
 mod geometry;
 mod model;
 mod profile;
+mod macos;
+#[cfg(feature = "validation")]
+mod validation;
 mod zoom;
 use model::*;
 use std::{sync::Mutex, time::Duration};
@@ -44,6 +47,16 @@ fn save(app: &tauri::AppHandle, prefs: &Preferences) -> Result<()> {
     .map_err(|e| e.to_string())
 }
 fn displays(app: &tauri::AppHandle) -> Result<Vec<Display>> {
+    // Tauri's AppHandle monitor getter converts NSScreen data on its caller's
+    // thread. Cover command workers as well as the periodic display refresh.
+    #[cfg(target_os = "macos")]
+    if objc2::MainThreadMarker::new().is_none() {
+        let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+        let handle = app.clone();
+        app.run_on_main_thread(move || { let _ = sender.send(displays(&handle)); })
+            .map_err(|e| e.to_string())?;
+        return receiver.recv().map_err(|e| e.to_string())?;
+    }
     let monitors = app.available_monitors().map_err(|e| e.to_string())?;
     Ok(monitors
         .iter()
@@ -91,6 +104,7 @@ fn show_settings(app: &tauri::AppHandle) -> Result<()> {
     let w = app
         .get_webview_window("settings")
         .ok_or("Settings window unavailable")?;
+    macos::set_level(&w)?;
     w.show().map_err(|e| e.to_string())?;
     w.set_focus().map_err(|e| e.to_string())
 }
@@ -161,18 +175,16 @@ fn place(app: &tauri::AppHandle, s: &mut Session) -> Result<()> {
         .map_err(|e| e.to_string())?;
     overlay.hide().map_err(|e| e.to_string())?;
     if let Some(m) = s.selected() {
-        overlay
-            .set_position(PhysicalPosition::new(m.x, m.y))
-            .map_err(|e| e.to_string())?;
-        overlay
-            .set_size(PhysicalSize::new(m.width, m.height))
-            .map_err(|e| e.to_string())?;
+        macos::place_overlay(&overlay, m)?;
         overlay.show().map_err(|e| e.to_string())?;
         let toolbar = app
             .get_webview_window("toolbar")
             .ok_or("Toolbar unavailable")?;
         place_toolbar(app, s)?;
+        #[cfg(not(target_os = "macos"))]
         toolbar.set_always_on_top(true).map_err(|e| e.to_string())?;
+        macos::set_level(&toolbar)?;
+        if let Some(settings) = app.get_webview_window("settings") { macos::set_level(&settings)?; }
         toolbar.show().map_err(|e| e.to_string())?;
     } else {
         show_settings(app)?;
@@ -199,7 +211,9 @@ fn drawing(app: &tauri::AppHandle, s: &mut Session, enabled: bool) -> Result<()>
         s.visible = true;
         w.set_focus().map_err(|e| e.to_string())?;
         if let Some(t) = app.get_webview_window("toolbar") {
+            #[cfg(not(target_os = "macos"))]
             t.set_always_on_top(true).map_err(|e| e.to_string())?;
+            macos::set_level(&t)?;
         }
     }
     Ok(())
@@ -536,8 +550,14 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app,_,event| {
             if event.state() == ShortcutState::Pressed {
-                let state = app.state::<Shared>();
-                if let Ok(mut s) = state.lock() { let enabled = !s.drawing; if let Err(e) = drawing(app,&mut s,enabled) { s.warning = Some(e); } let _ = publish(app,&s); };
+                // Native window operations may wait for the event loop. Never
+                // wait for Shared on that loop while another command owns it.
+                // Queue every press instead of dropping an action on contention.
+                let app = app.clone();
+                tauri::async_runtime::spawn_blocking(move || {
+                    let state = app.state::<Shared>();
+                    if let Ok(mut s) = state.lock() { let enabled = !s.drawing; if let Err(e) = drawing(&app,&mut s,enabled) { s.warning = Some(e); } let _ = publish(&app,&s); };
+                });
             }
         }).build())
         .invoke_handler(tauri::generate_handler![toolbar_panel,spotlight::spotlight_toggle,spotlight::spotlight_status,sharing::share_live,sharing::share_open,sharing::share_status,sharing::share_start,sharing::share_stop,sharing::share_add,sharing::share_remove,fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
@@ -553,17 +573,28 @@ fn main() {
                 s.prefs.monitor = primary.and_then(|p|s.displays.iter().find(|m|m.x==p.position().x && m.y==p.position().y).map(|m|m.id.clone()))
                     .or_else(||s.displays.first().map(|m|m.id.clone()));
             }
-            // Webviews can invoke commands before setup returns. Register state first.
+            // Take the initial guard before creating any WebViews. Their commands
+            // may otherwise own Shared and wait for main while setup waits here.
             app.manage(Mutex::new(s));
+            let state = app.state::<Shared>();
+            let mut s = state.lock().map_err(|e| e.to_string())?;
             app.manage(animation::ExportState::default());
             app.manage(captions::CaptionState::default());
             app.manage(sharing::ShareState::default());
             app.manage(spotlight::SpotlightState::default());
+            #[cfg(feature = "validation")]
+            validation::start(app.handle());
             let overlay = WebviewWindowBuilder::new(app,"overlay",WebviewUrl::App("index.html?view=overlay".into()))
                 .data_directory(webview_data(app.handle())?)
                 .title("Pointory · 필기").decorations(false).transparent(true).shadow(false).always_on_top(true)
                 .skip_taskbar(true).visible(false).focused(false).resizable(false).build()?;
             WebviewWindowBuilder::new(app,"toolbar",WebviewUrl::App("index.html?view=toolbar".into()))
+                .on_page_load(|window, event| {
+                    #[cfg(feature = "validation")]
+                    if event.event() == tauri::webview::PageLoadEvent::Finished { validation::page_loaded(&window); }
+                    #[cfg(not(feature = "validation"))]
+                    let _ = (window, event);
+                })
                 .parent(&overlay)?
                 .data_directory(webview_data(app.handle())?)
                 .title("Pointory").inner_size(660.,64.).decorations(false).transparent(true).shadow(false)
@@ -572,8 +603,9 @@ fn main() {
                 .parent(&overlay)?.always_on_top(true)
                 .data_directory(webview_data(app.handle())?)
                 .title("Pointory · 설정").inner_size(520.,700.).decorations(false).resizable(false).skip_taskbar(true).visible(false).build()?;
-            let state = app.state::<Shared>();
-            let mut s = state.lock().map_err(|e| e.to_string())?;
+            for label in ["overlay", "toolbar", "settings"] {
+                if let Some(window) = app.get_webview_window(label) { macos::set_level(&window)?; }
+            }
             #[cfg(target_os="linux")]
             if std::env::var("XDG_SESSION_TYPE").unwrap_or_default() == "wayland" {
                 s.warning = Some("이 버전은 Linux X11 세션을 지원 대상으로 합니다. Wayland에서는 창 배치와 단축키가 제한될 수 있습니다. X11 세션에서 실행하세요.".into());
@@ -590,20 +622,21 @@ fn main() {
             let handle = app.handle().clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(Duration::from_secs(2));
+                // Monitor conversion touches AppKit. Read it on main, but acquire
+                // Shared only after that callback returns to keep main unblocked.
+                let (sender, receiver) = std::sync::mpsc::sync_channel(1);
                 let app = handle.clone();
-                if handle.run_on_main_thread(move || {
-                    if let Ok(current) = displays(&app) {
-                        let state = app.state::<Shared>();
-                        if let Ok(mut s) = state.lock() {
-                            let now=now_ms();for items in s.fading.values_mut(){items.retain(|f|now<f.born+f.life);}
-                            if current != s.displays {
-                                s.displays = current;
-                                if let Err(e) = place(&app,&mut s) { s.warning=Some(e); }
-                                let _ = publish(&app,&s);
-                            }
-                        };
-                    }
-                }).is_err() { break; }
+                if handle.run_on_main_thread(move || { let _ = sender.send(displays(&app)); }).is_err() { break; }
+                let Ok(result) = receiver.recv() else { break; };
+                let Ok(current) = result else { continue; };
+                let state = handle.state::<Shared>();
+                let Ok(mut s) = state.lock() else { break; };
+                let now=now_ms();for items in s.fading.values_mut(){items.retain(|f|now<f.born+f.life);}
+                if current != s.displays {
+                    s.displays = current;
+                    if let Err(e) = place(&handle,&mut s) { s.warning=Some(e); }
+                    let _ = publish(&handle,&s);
+                }
             });
             Ok(())
         })

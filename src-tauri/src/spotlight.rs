@@ -1,5 +1,5 @@
 use std::sync::{Arc,atomic::{AtomicBool,AtomicU64,Ordering}};
-use tauri::{Emitter,Manager,PhysicalPosition,PhysicalSize,WebviewUrl,WebviewWindowBuilder};
+use tauri::{Emitter,Manager,WebviewUrl,WebviewWindowBuilder};
 use base64::Engine;
 type Result<T> = std::result::Result<T,String>;
 #[derive(Default)]pub struct SpotlightState { pub enabled:Arc<AtomicBool>, generation:Arc<AtomicU64> }
@@ -14,13 +14,14 @@ pub async fn spotlight_toggle(app:tauri::AppHandle)->Result<()> {
  window.set_ignore_cursor_events(true).map_err(|e|e.to_string())?;
  #[cfg(target_os="windows")]
  window.set_content_protected(true).map_err(|e|e.to_string())?;
- window.set_position(PhysicalPosition::new(display.x,display.y)).map_err(|e|e.to_string())?;window.set_size(PhysicalSize::new(display.width,display.height)).map_err(|e|e.to_string())?;
+ super::macos::place_overlay(&window,&display)?;
+ super::macos::set_level(&window)?;
  window.show().map_err(|e|e.to_string())?;
  let state=app.state::<SpotlightState>();let flag=state.enabled.clone();let generations=state.generation.clone();let generation=generations.fetch_add(1,Ordering::SeqCst)+1;flag.store(true,Ordering::SeqCst);
  std::thread::spawn(move||{
   let mut last=std::time::Instant::now()-std::time::Duration::from_secs(1);
   #[cfg(target_os="windows")]
-  let monitor=xcap::Monitor::all().ok().and_then(|ms|ms.into_iter().find(|m|m.x().ok()==Some(display.x)&&m.y().ok()==Some(display.y)));
+  let monitor=super::capture::monitor_for_display(&display).ok();
   while flag.load(Ordering::SeqCst)&&generations.load(Ordering::SeqCst)==generation {
    let prefs={let s=app.state::<super::Shared>();let Ok(s)=s.lock()else{break;};if s.selected().is_none_or(|m|m.id!=display.id){break;}s.prefs.clone()};
    let Ok(cursor)=app.cursor_position()else{break;};let x=cursor.x-display.x as f64;let y=cursor.y-display.y as f64;

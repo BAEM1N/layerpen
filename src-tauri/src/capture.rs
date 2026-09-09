@@ -3,6 +3,38 @@ use base64::Engine;
 use std::io::Write;
 use tauri_plugin_dialog::DialogExt;
 
+/// Request normal macOS consent only when the user asks to capture the screen.
+/// CoreGraphics can otherwise return a valid image containing only the desktop
+/// and our own windows, which must not be reported as a successful screen share.
+pub(crate) fn ensure_capture_permission() -> Result<()> {
+    #[cfg(target_os = "macos")]
+    if !objc2_core_graphics::CGPreflightScreenCaptureAccess() {
+        let _ = objc2_core_graphics::CGRequestScreenCaptureAccess();
+        return Err("Screen Recording permission is required. Allow Pointory in System Settings → Privacy & Security → Screen & System Audio Recording, then retry. Restart Pointory if needed.\n화면 기록 권한이 필요합니다. 시스템 설정에서 Pointory를 허용한 뒤 다시 시도하세요. 필요하면 앱을 다시 실행하세요.".into());
+    }
+    Ok(())
+}
+
+// On macOS Tauri scales the global display origin by that display's backing
+// scale, while xcap returns CGDisplayBounds in logical points. Windows and
+// Linux already use matching coordinates and must keep their physical origin.
+fn capture_origin(x: i32, y: i32, coordinate_scale: f64) -> (i32, i32) {
+    (
+        (f64::from(x) / coordinate_scale).round() as i32,
+        (f64::from(y) / coordinate_scale).round() as i32,
+    )
+}
+
+pub(crate) fn monitor_for_display(display: &Display) -> Result<xcap::Monitor> {
+    let scale = if cfg!(target_os = "macos") { display.scale } else { 1. };
+    let (x, y) = capture_origin(display.x, display.y, scale);
+    xcap::Monitor::all()
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .find(|m| m.x().ok() == Some(x) && m.y().ok() == Some(y))
+        .ok_or_else(|| "선택한 모니터를 캡처할 수 없습니다.".into())
+}
+
 #[tauri::command]
 pub async fn choose_capture_folder(app: tauri::AppHandle, title: Option<String>) -> Result<Option<String>> {
     app.dialog()
@@ -111,15 +143,12 @@ pub async fn save_capture(app: tauri::AppHandle, monitor: String, png: String) -
                     bytes
                 }
             } else {
+                ensure_capture_permission()?;
                 toolbar.hide().map_err(|e| e.to_string())?;
                 settings.hide().map_err(|e| e.to_string())?;
                 // Let the window manager composite the desktop without our controls.
                 std::thread::sleep(Duration::from_millis(300));
-                let target = xcap::Monitor::all()
-                    .map_err(|e| e.to_string())?
-                    .into_iter()
-                    .find(|m| m.x().ok() == Some(display.x) && m.y().ok() == Some(display.y))
-                    .ok_or("선택한 모니터를 캡처할 수 없습니다.")?;
+                let target = monitor_for_display(&display)?;
                 let image = target
                     .capture_image()
                     .map_err(|e| format!("화면 캡처 실패. 화면 기록 권한을 확인하세요: {e}"))?;
@@ -172,4 +201,26 @@ pub async fn save_capture(app: tauri::AppHandle, monitor: String, png: String) -
         }
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::capture_origin;
+
+    #[test]
+    fn retina_capture_uses_logical_secondary_display_origin() {
+        // A 2x display placed 1,440 points right of the main display is reported
+        // by Tauri at 2,880 physical pixels; xcap identifies it at 1,440 points.
+        assert_eq!(capture_origin(2880, 200, 2.), (1440, 100));
+        assert_ne!(capture_origin(2880, 200, 2.), (2880, 200));
+        assert_eq!(capture_origin(-2880, -1800, 2.), (-1440, -900));
+        assert_eq!(capture_origin(0, 0, 2.), (0, 0));
+    }
+
+    #[test]
+    fn unscaled_capture_preserves_physical_origins() {
+        for origin in [(0, 0), (1920, 120), (-1920, -1080)] {
+            assert_eq!(capture_origin(origin.0, origin.1, 1.), origin);
+        }
+    }
 }

@@ -58,13 +58,15 @@ pub fn stop(app: &tauri::AppHandle) {
 #[tauri::command]
 pub async fn caption_open(app: tauri::AppHandle) -> Result<(), String> {
     if let Some(w) = app.get_webview_window("caption-settings") {
+        super::macos::set_level(&w)?;
         w.show().map_err(|e| e.to_string())?;
         return w.set_focus().map_err(|e| e.to_string());
     }
-    WebviewWindowBuilder::new(&app,"caption-settings",WebviewUrl::App("captions.html".into()))
+    let window = WebviewWindowBuilder::new(&app,"caption-settings",WebviewUrl::App("captions.html".into()))
         .data_directory(super::webview_data(&app)?)
         .title("Pointory · Live captions (local preview)").inner_size(660.,740.)
         .build().map_err(|e|e.to_string())?;
+    super::macos::set_level(&window)?;
     Ok(())
 }
 
@@ -118,6 +120,7 @@ pub async fn caption_start(app: tauri::AppHandle, config: serde_json::Value) -> 
         w
     };
     let selected = app.state::<super::Shared>().lock().map_err(|e|e.to_string())?.selected().cloned();
+    super::macos::set_level(&w)?;
     if let Some(m) = selected {
         let width = (m.width as f64 / m.scale - 48.).min(960.).max(200.);
         w.set_size(tauri::LogicalSize::new(width,150.)).map_err(|e|e.to_string())?;

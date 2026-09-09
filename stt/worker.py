@@ -64,6 +64,9 @@ class Audio:
             import soundcard as sc
             source = self.config.get('source', 'microphone')
             device_id = self.config.get('device')
+            # HTML option values are strings; CoreAudio identifies devices by integer.
+            if sys.platform == 'darwin' and isinstance(device_id, str) and device_id.isdecimal():
+                device_id = int(device_id)
             if device_id:
                 mic = sc.get_microphone(device_id, include_loopback=True)
             elif source == 'system':
@@ -79,7 +82,7 @@ class Audio:
                     data = recorder.record(numframes=self.rate//10)
                     self.put(np.asarray(data.mean(axis=1), dtype=np.float32))
         except Exception:
-            self.error = SttError('Audio input failed. Check Windows microphone permission and selected device.')
+            self.error = SttError('Audio input failed. Check microphone permission and the selected device.')
             STOP.set()
 
     def start(self):

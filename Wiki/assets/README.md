@@ -1,8 +1,9 @@
 # Screenshot provenance
 
-The current screenshots were refreshed from Pointory v0.1 source on 2026-09-09, including the student page served by the actual Rust HTTP fixture. JPEG is the browser capture tool's returned format; files are stored without visual alteration. The old `onpen-overview.jpg` is retained separately for link compatibility.
+The main screenshots were refreshed from Pointory v0.1 source on 2026-09-09, including the student page served by the actual Rust HTTP fixture. Settings font-size PNGs were added on 2026-09-10. JPEG and PNG files retain the capture tool's returned format and are stored without visual alteration. The old `onpen-overview.jpg` is retained separately for link compatibility.
 
 - `kr-*` / `en-*`: actual settings UI in a 520×700 iframe. Language controls were used to select Korean or English. Example monitors and font lists are browser-preview placeholders, not detected native hardware.
+- `settings-font-ko-20px.png` / `settings-font-en-20px.png`: actual Korean/English settings UI in a 520×700 browser preview, showing the selected font and 20px settings text size. The short font inventory is preview data; these images do not establish native Mac font or input behavior.
 - `toolbar-layouts.jpg`: actual horizontal and vertical toolbar UI with the attached tools panel.
 - `pointory-overview.jpg`: actual toolbar and drawing renderer over an authored example lesson. This is a documentation composition, not a native desktop screenshot.
 - `onpen-overview.jpg`: the previous OnPen overview, retained only so existing image links continue to work. Current README and drawing guides use `pointory-overview.jpg`.

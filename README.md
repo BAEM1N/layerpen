@@ -23,7 +23,7 @@ Pointory is a free, MIT-licensed desktop screen annotation tool for teachers, pr
 | --- | --- | --- |
 | Windows x64 | [Installer EXE](https://github.com/BAEM1N/pointory/releases/download/v0.1.0/Pointory_0.1.0_x64-setup.exe) | v0.1.0 beta |
 | Windows x64 | [Portable ZIP](https://github.com/BAEM1N/pointory/releases/download/v0.1.0/Pointory-0.1.0-windows-x64-portable.zip) | Extract, then run `Pointory.exe` |
-| macOS | No DMG published yet | Runtime and Apple Silicon validation planned for v0.2 |
+| macOS | No DMG published yet | Earlier M4 build checked; latest native rerun pending. [Validation scope](docs/validation/0.2-macos.ko.md) |
 | Linux | No binary published yet | X11 development target; Wayland is not supported |
 
 [SHA-256 checksums](https://github.com/BAEM1N/pointory/releases/download/v0.1.0/SHA256SUMS.txt) · [Release notes](https://github.com/BAEM1N/pointory/releases/tag/v0.1.0)
@@ -45,7 +45,7 @@ Windows needs WebView2. The installer can obtain that runtime. Current builds ar
 | Feature | How it helps | Guide |
 | --- | --- | --- |
 | Pen, highlighter, shapes | Mark slides, explain a diagram, highlight a point | [Drawing](Wiki/EN/03-drawing.md) |
-| Typed text + fonts | Click to type; choose an installed font or import a TTF | [Text and fonts](Wiki/EN/04-text-fonts.md) |
+| Typed text + settings fonts | Installed fonts and TTF import; settings font and size controls on `main` | [Text and fonts](Wiki/EN/04-text-fonts.md) |
 | Horizontal or vertical toolbar | Keep everyday tools visible; open shapes, colors, and more beside the toolbar | [Toolbar](Wiki/EN/02-toolbar.md) |
 | Docked settings + five themes | Keep controls beside the toolbar and choose the app color | [Settings](Wiki/EN/02-toolbar.md) |
 | Select, move, resize, undo | Adjust whole annotations without drawing them again | [Editing ink](Wiki/EN/03-drawing.md) |
@@ -92,7 +92,7 @@ Yes: start **Share materials** on the instructor PC, select files, and show stud
 
 ### Is macOS ready?
 
-Not yet. A successful CI build is not a native usability test. No verified DMG is available. [v0.2 Mac checklist](docs/HANDOFF-MACBOOK.ko.md).
+An earlier development build passed nine native UI/export checks on an M4 Mac mini. The new settings-font controls passed browser checks; a native rerun of the latest changes is still pending. Full-screen capture, real microphone input, Retina/multiple displays, and Apple GPU/Neural Engine acceleration remain incomplete; Mac spotlight currently dims without magnification. The latest arm64 `.app` and DMG passed build, ad hoc signing, and integrity checks. Installation and launch of that DMG remain unverified, and no DMG is published yet. [Validation record](docs/validation/0.2-macos.ko.md) · [Remaining Mac work](docs/HANDOFF-MACBOOK.ko.md).
 
 ### What happened to OnPen and LayerPen?
 

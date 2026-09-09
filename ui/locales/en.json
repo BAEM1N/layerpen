@@ -258,5 +258,8 @@
   "세로로 전환": "Switch to vertical",
   "굵기": "Size",
   "현재 도구에 바로 적용됩니다.": "Applies to the current tool.",
-  "자료 공유": "Share materials"
+  "자료 공유": "Share materials",
+  "텍스트 및 설정 글꼴": "Text and settings font",
+  "설정 글자 크기": "Settings text size",
+  "선택한 글꼴은 텍스트와 설정에 함께 적용됩니다. 설정 글자 크기는 펜 굵기나 화면에 입력한 텍스트 크기를 바꾸지 않습니다.": "The selected font applies to both text and settings. Settings text size does not change pen width or text placed on the screen."
 }

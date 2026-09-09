@@ -31,7 +31,7 @@ let zoomRegion=null,zoomImage=null,zoomImageId=null,zoomLoadingId=null;
 const inputPoint=e=>sourcePoint(e.clientX,e.clientY,innerWidth,innerHeight,activeZoom(state));
 const widths=[2,4,8,16,24];
 const widthNames=['아주 가늘게','가늘게','보통','굵게','아주 굵게'];
-const defaults={language:'auto',theme:'blue',text_font:'Malgun Gothic',fade_seconds:3,spotlight_radius:120,spotlight_dim:.65,spotlight_scale:2,layout:'horizontal',pen_width:4,marker_width:16,eraser_width:24,marker_opacity:0.3,shortcut:'CommandOrControl+Shift+D',capture_dir:'',capture_layer_only:false,gif_speed:1,gif_background:'white',gif_repeat:true,tool_shortcuts:true,keybindings:defaultBindings,global_shortcut_enabled:true,palette:['#8b5cf6','#f43f5e','#fbbf24','#38bdf8','#f8fafc']};
+const defaults={language:'auto',theme:'blue',text_font:'Malgun Gothic',settings_font_size:14,fade_seconds:3,spotlight_radius:120,spotlight_dim:.65,spotlight_scale:2,layout:'horizontal',pen_width:4,marker_width:16,eraser_width:24,marker_opacity:0.3,shortcut:'CommandOrControl+Shift+D',capture_dir:'',capture_layer_only:false,gif_speed:1,gif_background:'white',gif_repeat:true,tool_shortcuts:true,keybindings:defaultBindings,global_shortcut_enabled:true,palette:['#8b5cf6','#f43f5e','#fbbf24','#38bdf8','#f8fafc']};
 const preferences=()=>({...defaults,...state?.preferences});
 const shortcutLabel=value=>value.replace('CommandOrControl',/Mac/.test(navigator.platform)?'⌘':'Ctrl').replace('Shift','⇧').replaceAll('+',' ');
 function sizes(name,value){return `<div class="size-choices" data-size-group="${name}">${widths.map((w,i)=>`<button type="button" class="size-choice ${value===w?'selected':''}" data-size="${w}" title="${widthNames[i]}" aria-label="${widthNames[i]}" aria-pressed="${value===w}"><span style="--dot:${Math.max(3,w*.65)}px"></span></button>`).join('')}</div>`;}
@@ -231,7 +231,7 @@ function mountSettings() {
   <section class="preference-section"><h2>도구막대</h2><div class="setting-row"><span>방향</span><div class="segmented"><button data-layout="horizontal">가로</button><button data-layout="vertical">세로</button></div></div><p class="hint">도구막대의 점 무늬를 잡고 원하는 위치로 이동하세요.</p></section>
   <section class="preference-section"><h2>색상 팔레트</h2><p class="hint">앞의 5칸은 자주 쓰는 색으로 설정하세요. 마지막 칸은 도구막대에서 자유색을 선택합니다.</p><div class="palette-settings">${defaults.palette.map((c,i)=>`<label class="preset-setting"><input type="color" data-preset="${i}" aria-label="기본 색상 ${i+1}" value="${c}"><span>색상 ${i+1}</span></label>`).join('')}<div class="preset-setting picker-info"><span class="picker-sample"></span><span>자유색 · 컬러 피커</span></div></div></section>
   <section class="preference-section"><h2>필기 도구</h2>${[['pen_width','펜 · 도형'],['marker_width','형광펜'],['eraser_width','지우개']].map(([key,label])=>`<div class="setting-row"><span>${label} 기본 굵기</span>${sizes(key,defaults[key])}</div>`).join('')}
-  <div class="setting-row"><label for="textFont">텍스트 글꼴</label><select id="textFont" aria-label="텍스트 글꼴"><option value="Malgun Gothic">Malgun Gothic</option></select></div><div class="font-actions"><button type="button" id="importFont" class="outline">TTF 파일 추가</button><span id="fontStatus" class="hint" role="status"></span></div><p class="hint">시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다. 글자 크기는 펜 굵기 5단계에 따라 16·24·40·72·104px입니다. 입력 중 Enter는 완료, Shift+Enter는 줄바꿈, Escape는 취소입니다.</p><div class="setting-row"><label for="opacity">형광펜 불투명도</label><div class="range-value"><input id="opacity" type="range" min="10" max="80" step="5"><output id="opacityValue"></output></div></div></section>
+  <div class="setting-row"><label for="textFont">텍스트 및 설정 글꼴</label><select id="textFont" aria-label="텍스트 및 설정 글꼴"><option value="Malgun Gothic">Malgun Gothic</option></select></div><div class="font-actions"><button type="button" id="importFont" class="outline">TTF 파일 추가</button><span id="fontStatus" class="hint" role="status"></span></div><p class="hint">시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다. 글자 크기는 펜 굵기 5단계에 따라 16·24·40·72·104px입니다. 입력 중 Enter는 완료, Shift+Enter는 줄바꿈, Escape는 취소입니다.</p><div class="setting-row"><label for="settingsFontSize">설정 글자 크기</label><select id="settingsFontSize">${[12,14,16,18,20].map(size=>`<option value="${size}">${size} px</option>`).join('')}</select></div><p class="hint">선택한 글꼴은 텍스트와 설정에 함께 적용됩니다. 설정 글자 크기는 펜 굵기나 화면에 입력한 텍스트 크기를 바꾸지 않습니다.</p><div class="setting-row"><label for="opacity">형광펜 불투명도</label><div class="range-value"><input id="opacity" type="range" min="10" max="80" step="5"><output id="opacityValue"></output></div></div></section>
   <section class="preference-section"><h2>스크린샷</h2><label class="check-row"><input type="checkbox" id="layerOnly"> 필기 레이어만 캡처</label><p class="hint">기본값은 선택한 화면 + 필기입니다. 레이어만 저장하면 배경이 투명한 PNG가 만들어집니다.</p><label class="field-label" for="captureDir">기본 저장 위치</label><div class="folder-row"><input id="captureDir" readonly aria-label="기본 저장 위치"><button class="outline" id="chooseFolder">폴더 선택</button></div><p class="hint">파일명은 날짜·시간으로 자동 생성됩니다.<br><span id="filenameSample"></span></p><button class="outline" id="captureNow">${icon('camera')} 지금 캡처</button><p class="hint" id="lastCapture" role="status"></p></section>
   <section class="preference-section"><h2>부분 확대 + 판서</h2><p class="hint">돋보기로 영역을 드래그하면 현재 화면을 멈춰 최대 x6까지 확대합니다. 클릭만 하면 x2로 확대합니다. 확대 종료 버튼 또는 마우스 모드로 원래 화면에 돌아갑니다.</p><p class="hint">선택한 굵기는 확대 화면에서 보이는 굵기입니다. x2에서 굵기 8로 그리면 원래 화면에는 굵기 4로 남습니다. PNG는 현재 확대 영역을, GIF는 원래 화면 좌표 전체를 사용합니다. 화면 이동·동영상은 확대 중 갱신되지 않습니다.</p></section>
   <section class="preference-section"><h2>보드와 강조</h2><div class="setting-row"><span>판서 배경</span><div class="segmented"><button data-board="screen">화면</button><button data-board="white">화이트</button><button data-board="black">블랙</button></div></div><p class="hint">배경을 바꿔도 판서는 유지됩니다. 마우스 모드에서는 보드 배경을 내리고, 다시 필기하면 복원합니다.</p><div class="setting-row"><label for="fadeSeconds">강조 잉크 유지 시간</label><select id="fadeSeconds">${[1,2,3,5,10].map(n=>`<option value="${n}">${n}초</option>`).join('')}</select></div><p class="hint">펜을 뗀 뒤 지정한 시간 동안 보이다가 사라집니다. 일반 판서의 선택·실행 취소와 분리하며, GIF에는 강조와 사라지는 과정이 포함됩니다.</p></section>
@@ -263,6 +263,7 @@ function mountSettings() {
   root.querySelector('#theme').onchange=event=>update({theme:event.target.value});
   root.querySelector('#language').onchange=event=>update({language:event.target.value});
   root.querySelector('#textFont').onchange=event=>update({text_font:event.target.value});
+  root.querySelector('#settingsFontSize').onchange=event=>update({settings_font_size:Number(event.target.value)});
   refreshFonts();
   root.querySelector('#importFont').onclick=async()=>{const button=root.querySelector('#importFont');button.disabled=true;try{if(!native){error('데스크톱 앱으로 실행하세요.');return;}const font=await invoke('import_font');if(font){await refreshFonts();await update({text_font:font.family});}}catch(e){error(e);}finally{button.disabled=false;}};
   root.querySelectorAll('[data-preset]').forEach(el=>el.onchange=()=>{const palette=[...preferences().palette];palette[Number(el.dataset.preset)]=el.value;update({palette});});
@@ -302,6 +303,9 @@ async function refreshFonts(){try{const {system,assets}=await fontChoices();cons
 let monitorSignature = '';
 function updateSettings() {
   const p=preferences();
+  document.body.style.setProperty('--settings-font-family',JSON.stringify(p.text_font));
+  document.body.style.setProperty('--settings-font-size',p.settings_font_size+'px');
+  root.querySelector('#settingsFontSize').value=p.settings_font_size;
   root.querySelector('#spotRadius').value=p.spotlight_radius;root.querySelector('#spotDim').value=p.spotlight_dim*100;root.querySelector('#spotScale').value=p.spotlight_scale;
   root.querySelector('#language').value=p.language;
   root.querySelector('#theme').value=p.theme;
@@ -459,7 +463,7 @@ async function start() {
   if(!native&&params.get('preview')!=='1') {root.innerHTML='<div class="launch-message"><h1>Pointory</h1><p>이 화면은 데스크톱 앱에서 실행해야 합니다.</p><p>README의 실행 방법을 확인하세요.</p></div>';return;}
   if(view==='toolbar')mountToolbar();else if(view==='overlay')mountOverlay();else mountSettings();
   if(native){
-    await native.event.listen('fonts-changed',async()=>{try{await ensureFonts();if(view==='settings')await refreshFonts();schedulePaint();}catch(e){error(e);}});
+    await native.event.listen('fonts-changed',async()=>{try{await ensureFonts();if(view==='settings')await refreshFonts();if(view==='overlay')schedulePaint();}catch(e){error(e);}});
     await native.event.listen('session',event=>receive(event.payload));
     await native.event.listen('capture-saved',event=>{if(view==='toolbar')error('캡처 저장됨');if(view==='settings')root.querySelector('#lastCapture').textContent=t('저장됨: {value}').replace('{value}',event.payload);});
     await native.event.listen('capture-error',event=>error(event.payload));

@@ -97,6 +97,40 @@ class AccelerationTests(unittest.TestCase):
         with self.assertRaises(RuntimeError): choose({'provider':'qwen','accelerator':'openvino:NPU'},devices)
 
 
+class AudioDeviceTests(unittest.TestCase):
+    def test_selected_coreaudio_id_survives_html_string_round_trip(self):
+        # SoundCard's CoreAudio lookup requires integer keys. Other backends use strings.
+        for platform, expected_id in [('darwin', 83), ('win32', '83'), ('linux', '83')]:
+            with self.subTest(platform=platform):
+                STOP.clear()
+                recorder = Mock()
+                def record(**kwargs):
+                    STOP.set()
+                    return np.zeros((1600, 1), np.float32)
+                recorder.record.side_effect = record
+                context = Mock()
+                context.__enter__ = Mock(return_value=recorder)
+                context.__exit__ = Mock(return_value=False)
+                mic = SimpleNamespace(name='Selected input', isloopback=False,
+                                      recorder=Mock(return_value=context))
+                def get_microphone(device_id, **kwargs):
+                    if type(device_id) is not type(expected_id) or device_id != expected_id:
+                        raise IndexError('No device with that ID')
+                    return mic
+                backend = SimpleNamespace(get_microphone=Mock(side_effect=get_microphone))
+                audio = Audio({'source': 'microphone', 'device': '83'}, 16000)
+                try:
+                    with patch('worker.sys.platform', platform), patch.dict('sys.modules', {'soundcard': backend}), \
+                         patch('worker.emit') as emit:
+                        audio.capture()
+                    self.assertIsNone(audio.error)
+                    backend.get_microphone.assert_called_once_with(expected_id, include_loopback=True)
+                    recorder.record.assert_called_once_with(numframes=1600)
+                    emit.assert_called_once_with('status', text='Listening', device='Selected input')
+                finally:
+                    STOP.clear()
+
+
 class StreamingTests(unittest.TestCase):
     def test_no_hallucination_jobs_for_silence(self):
         s = Segmenter()
