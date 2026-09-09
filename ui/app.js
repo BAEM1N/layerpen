@@ -31,11 +31,15 @@ let zoomRegion=null,zoomImage=null,zoomImageId=null,zoomLoadingId=null;
 const inputPoint=e=>sourcePoint(e.clientX,e.clientY,innerWidth,innerHeight,activeZoom(state));
 const widths=[2,4,8,16,24];
 const widthNames=['아주 가늘게','가늘게','보통','굵게','아주 굵게'];
-const defaults={language:'auto',theme:'blue',text_font:'Malgun Gothic',fade_seconds:3,spotlight_radius:120,spotlight_dim:.65,spotlight_scale:2,layout:'horizontal',toolbar_lines:2,pen_width:4,marker_width:16,eraser_width:24,marker_opacity:0.3,shortcut:'CommandOrControl+Shift+D',capture_dir:'',capture_layer_only:false,gif_speed:1,gif_background:'white',gif_repeat:true,tool_shortcuts:true,keybindings:defaultBindings,global_shortcut_enabled:true,palette:['#8b5cf6','#f43f5e','#fbbf24','#38bdf8','#f8fafc']};
+const defaults={language:'auto',theme:'blue',text_font:'Malgun Gothic',fade_seconds:3,spotlight_radius:120,spotlight_dim:.65,spotlight_scale:2,layout:'horizontal',pen_width:4,marker_width:16,eraser_width:24,marker_opacity:0.3,shortcut:'CommandOrControl+Shift+D',capture_dir:'',capture_layer_only:false,gif_speed:1,gif_background:'white',gif_repeat:true,tool_shortcuts:true,keybindings:defaultBindings,global_shortcut_enabled:true,palette:['#8b5cf6','#f43f5e','#fbbf24','#38bdf8','#f8fafc']};
 const preferences=()=>({...defaults,...state?.preferences});
 const shortcutLabel=value=>value.replace('CommandOrControl',/Mac/.test(navigator.platform)?'⌘':'Ctrl').replace('Shift','⇧').replaceAll('+',' ');
 function sizes(name,value){return `<div class="size-choices" data-size-group="${name}">${widths.map((w,i)=>`<button type="button" class="size-choice ${value===w?'selected':''}" data-size="${w}" title="${widthNames[i]}" aria-label="${widthNames[i]}" aria-pressed="${value===w}"><span style="--dot:${Math.max(3,w*.65)}px"></span></button>`).join('')}</div>`;}
 const icons = {
+  more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  rotate:'<path d="M4 8a8 8 0 0 1 14-3l2 3M20 3v5h-5M20 16A8 8 0 0 1 6 19l-2-3M4 21v-5h5"/>',
+  shapes:'<rect x="3" y="3" width="10" height="10" rx="1"/><circle cx="16" cy="16" r="5"/>',
+  share:'<path d="M12 16V3m-5 5 5-5 5 5M4 13v7h16v-7"/>',
   spotlight:'<circle cx="12" cy="12" r="5"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/>',
   text:'<path d="M4 4h16M12 4v17M8 21h8M4 4v4m16-4v4"/>',
   zoom:'<circle cx="10" cy="10" r="7"/><path d="m15 15 7 7M6 10h8m-4-4v8"/>',
@@ -70,8 +74,9 @@ async function invoke(command, args = {}) {
   // Explicit UI preview only. This never pretends to control native windows.
   if (!previewState) previewState = {
     monitors:[{id:'display-a',name:'DELL U2723QE',width:3840,height:2160,scale:1.5,x:0,y:0},{id:'display-b',name:'LG ULTRAGEAR',width:2560,height:1440,scale:1,x:3840,y:0}],
-    selected:'display-b',connected:true,drawing:false,tool:'pen',color:'#8b5cf6',width:4,strokes:[],canUndo:false,canRedo:false,preferences:{...defaults,layout:params.get('layout')==='vertical'?'vertical':'horizontal',toolbar_lines:[1,2,3].includes(Number(params.get('lines')))?Number(params.get('lines')):2},warning:'브라우저 UI 미리보기 · 실제 화면 오버레이는 데스크톱 앱에서 작동합니다.'
+    visible:true,selected:'display-b',connected:true,drawing:false,tool:'pen',color:'#8b5cf6',width:4,strokes:[],canUndo:false,canRedo:false,preferences:{...defaults,layout:params.get('layout')==='vertical'?'vertical':'horizontal'},warning:'브라우저 UI 미리보기 · 실제 화면 오버레이는 데스크톱 앱에서 작동합니다.'
   };
+  if(command==='toolbar_panel') return;
   if(command==='action'&&args.name.startsWith('board')){previewState.board=args.name==='board'?({screen:'white',white:'black',black:'screen'}[previewState.board||'screen']):args.name.slice(6);previewState.drawing=true;previewState.visible=true;}
   if (command === 'snapshot') return structuredClone(previewState);
   if (command === 'select_monitor') previewState.selected = args.id;
@@ -113,77 +118,108 @@ function receive(next) {
 }
 function button(name, title, extra = '') { return `<button type="button" title="${title}" aria-label="${title}" ${extra}>${icon(name)}</button>`; }
 
+let toolbarPanel = null, panelRevision = 0, panelQueue = Promise.resolve();
+function positionToolbarPanel() {
+  if (!toolbarPanel) return;
+  const panel=root.querySelector(`#${toolbarPanel}`), rail=root.querySelector('.toolbar');
+  const vertical=preferences().layout==='vertical', r=rail.getBoundingClientRect();
+  panel.style.left=(vertical ? r.right+8 : Math.max(6,Math.min(root.querySelector(`[aria-controls="${toolbarPanel}"]`).getBoundingClientRect().left,innerWidth-270)))+'px';
+  panel.style.top=(vertical ? Math.max(6,Math.min(root.querySelector(`[aria-controls="${toolbarPanel}"]`).getBoundingClientRect().top,innerHeight-panel.offsetHeight-6)) : r.bottom+8)+'px';
+}
+async function setToolbarPanel(id, focus=false) {
+  if(id===toolbarPanel) return panelQueue.catch(()=>{});
+  const revision=++panelRevision, previous=toolbarPanel;
+  toolbarPanel=id;
+  root.querySelectorAll('.toolbar-panel').forEach(panel=>panel.hidden=true);
+  root.querySelectorAll('[data-panel]').forEach(el=>el.setAttribute('aria-expanded',String(el.dataset.panel===id)));
+  // Serialize native resizes so a fast close cannot leave an invisible enlarged window.
+  panelQueue=panelQueue.catch(()=>{}).then(()=>invoke('toolbar_panel',{open:!!id}));
+  try { await panelQueue; } catch(e) { if(revision===panelRevision){toolbarPanel=null;root.querySelectorAll('[data-panel]').forEach(el=>el.setAttribute('aria-expanded','false'));} error(e);return; }
+  if(revision!==panelRevision) return;
+  if(id){const panel=root.querySelector(`#${id}`);panel.hidden=false;positionToolbarPanel();if(focus)panel.querySelector('button:not(:disabled)')?.focus();}
+  else if(focus&&previous)root.querySelector(`[aria-controls="${previous}"]`)?.focus();
+}
 function mountToolbar() {
-  root.innerHTML = `<div class="toolbar">
-    <span class="grip" title="도구막대 이동">⠿</span><button class="toolbar-brand" title="OnPen · 설정" aria-label="설정" data-action="settings">on</button>
-    <div class="mode-group">${button('mouse','마우스 모드','id="mode"')}${button('eye','판서 숨기기','id="visibility"')}</div>
-    <div class="tool-group">${button('pen','펜','data-tool="pen"')}${button('text','텍스트','data-tool="text"')}${button('marker','형광펜','data-tool="marker"')}${button('eraser','지우개','data-tool="eraser"')}${button('select','획 선택 / 이동 / 크기 (V)','data-tool="select"')}${button('line','직선','data-tool="line"')}${button('rectangle','사각형','data-tool="rectangle"')}${button('ellipse','원 / 타원','data-tool="ellipse"')}${button('fade','사라지는 잉크','data-tool="fade"')}${button('board','화면 / 화이트 / 블랙보드','id="board"')}${button('zoom','부분 확대','data-tool="zoom"')}${button('zoomReset','확대 종료','id="zoomReset"')}
-    <div class="thickness-control"><button id="thickness" aria-label="굵기 선택" title="굵기 선택" aria-expanded="false" aria-controls="thicknessMenu"><span class="thickness-dot"></span><small>⌄</small></button><div id="thicknessMenu" hidden>${sizes('active',4)}</div></div></div>
-    <div class="palette">${defaults.palette.map((c,i)=>`<button class="swatch" data-slot="${i}" data-color="${c}" style="--swatch:${c}" title="색상 ${c}" aria-label="색상 ${c}"></button>`).join('')}<label class="custom-color" title="자유색"><input type="color" id="customColor" aria-label="자유색" value="#8b5cf6"></label></div>
-    <div class="history-group">${button('undo','실행 취소','data-action="undo" id="undo"')}${button('redo','다시 실행','data-action="redo" id="redo"')}</div>
-    <div class="utility-group">${button('trash','현재 화면 필기 전체 지우기','id="clear"')}${button('settings','설정','data-action="settings"')}</div>
-    <div class="export-tools">${button('spotlight','스포트라이트 · Spotlight','id="spotlightToggle"')}<button type="button" id="captionOpen" title="실시간 자막" aria-label="실시간 자막">CC</button>${button('camera','스크린샷 캡처','id="capture"')}${button('gif','GIF 내보내기','id="gifExport"')}${button('close','앱 종료','data-action="quit" class="quit-app"')}</div>
-    </div><div class="toolbar-caption"><span id="modeLabel"></span><span id="toolbarShortcut"></span></div>`;
-  root.querySelector('.grip').addEventListener('pointerdown', () => { if(native) native.window.getCurrentWindow().startDragging().catch(error); });
-  root.querySelector('#spotlightToggle').onclick=()=>run('spotlight_toggle');
-  root.querySelector('#captionOpen').onclick=()=>run('caption_open');
-  root.querySelector('#mode').onclick = () => run('action',{name:'mouse'});
-  root.querySelector('#zoomReset').onclick=()=>run('action',{name:'zoom_reset'});
-  root.querySelector('#board').onclick=()=>run('action',{name:'board'});
-  root.querySelector('#visibility').onclick=()=>run('action',{name:'toggle_visibility'});
-  root.querySelectorAll('[data-action]').forEach(el => el.onclick = () => run('action',{name:el.dataset.action}));
-  root.querySelector('#clear').onclick = () => {
-    // A second click in three seconds avoids modal webview dialogs over the desktop.
-    const el = root.querySelector('#clear');
-    if (el.dataset.armed) { delete el.dataset.armed; el.classList.remove('armed'); run('action',{name:'clear'}); }
-    else { el.dataset.armed = '1'; el.classList.add('armed'); error('전체 지우기를 한 번 더 누르면 현재 화면의 필기와 GIF 기록이 초기화됩니다.'); setTimeout(()=>{delete el.dataset.armed;el.classList.remove('armed');},3000); }
+  const tile=(name,label,extra)=>`<button type="button" title="${label}" aria-label="${label}" ${extra}>${icon(name)}<span>${label}</span></button>`;
+  const panelHeader=title=>`<div class="panel-heading"><strong>${title}</strong>${button('close','닫기','data-panel-close')}</div>`;
+  root.innerHTML = `<div class="toolbar" role="toolbar" aria-label="도구막대">
+    <span class="grip" title="도구막대 이동">⠿</span>
+    <div class="toolbar-group drawing-tools" role="group" aria-label="필기 도구">${button('mouse','마우스 모드','id="mode"')}${button('pen','펜','data-tool="pen"')}${button('marker','형광펜','data-tool="marker"')}${button('text','텍스트','data-tool="text"')}${button('eraser','지우개','data-tool="eraser"')}${button('shapes','도형과 추가 도구','id="shapesToggle" data-panel="shapesPanel" aria-expanded="false" aria-controls="shapesPanel"')}</div>
+    <div class="toolbar-group" role="group" aria-label="색상과 굵기"><button type="button" id="styleToggle" title="색상과 굵기" aria-label="색상과 굵기" data-panel="stylePanel" aria-expanded="false" aria-controls="stylePanel"><span class="current-color"><span class="thickness-dot"></span></span><span id="widthValue"></span></button></div>
+    <div class="toolbar-group" role="group" aria-label="편집">${button('undo','실행 취소','data-action="undo" id="undo"')}${button('redo','다시 실행','data-action="redo" id="redo"')}</div>
+    <div class="toolbar-group" role="group" aria-label="발표">${button('spotlight','스포트라이트 · Spotlight','id="spotlightToggle"')}<button type="button" id="captionOpen" title="실시간 자막" aria-label="실시간 자막">CC</button>${button('more','더보기','data-panel="morePanel" aria-expanded="false" aria-controls="morePanel"')}</div>
+    <div class="toolbar-group toolbar-system" role="group" aria-label="앱 제어">${button('rotate','세로로 전환','id="orientationToggle"')}${button('settings','설정','data-action="settings"')}${button('close','앱 종료','data-action="quit" class="quit-app"')}</div>
+    </div>
+    <section class="toolbar-panel" id="shapesPanel" aria-label="도형과 추가 도구" hidden>${panelHeader('도형과 추가 도구')}<div class="panel-tools">${[['line','직선'],['rectangle','사각형'],['ellipse','타원'],['select','선택 · 이동 · 크기'],['fade','사라지는 잉크'],['zoom','부분 확대']].map(([tool,label])=>tile(tool,label,`data-tool="${tool}"`)).join('')}</div></section>
+    <section class="toolbar-panel" id="stylePanel" aria-label="색상과 굵기" hidden>${panelHeader('색상과 굵기')}<div class="palette">${defaults.palette.map((c,i)=>`<button type="button" class="swatch" data-slot="${i}" data-color="${c}" style="--swatch:${c}" title="색상 ${c}" aria-label="색상 ${c}"></button>`).join('')}<label class="custom-color" title="자유색"><input type="color" id="customColor" aria-label="자유색" value="#8b5cf6"></label></div><div class="panel-subheading"><span>굵기</span><output id="sizeValue"></output></div>${sizes('active',4)}<p class="panel-hint">현재 도구에 바로 적용됩니다.</p></section>
+    <section class="toolbar-panel" id="morePanel" aria-label="더보기" hidden>${panelHeader('더보기')}<div class="panel-tools">${tile('board','화면 / 화이트 / 블랙보드','id="board"')}${tile('eye','판서 숨기기','id="visibility"')}${tile('zoomReset','확대 종료','id="zoomReset"')}${tile('camera','스크린샷 캡처','id="capture"')}${tile('gif','GIF 내보내기','id="gifExport"')}${tile('share','자료 공유','id="shareOpen"')}${tile('trash','현재 화면 필기 전체 지우기','id="clear" class="danger-action"')}</div></section>`;
+  root.querySelector('.grip').addEventListener('pointerdown', async () => { await setToolbarPanel(null);if(native) native.window.getCurrentWindow().startDragging().catch(error); });
+  root.querySelectorAll('[data-panel]').forEach(el=>el.onclick=e=>setToolbarPanel(toolbarPanel===el.dataset.panel?null:el.dataset.panel,e.detail===0));
+  root.querySelectorAll('[data-panel-close]').forEach(el=>el.onclick=()=>setToolbarPanel(null,true));
+  const perform=(command,args)=>async()=>{await setToolbarPanel(null);await run(command,args);};
+  root.querySelector('#spotlightToggle').onclick=perform('spotlight_toggle');
+  root.querySelector('#captionOpen').onclick=perform('caption_open');
+  root.querySelector('#shareOpen').onclick=perform('share_open');
+  root.querySelector('#mode').onclick=perform('action',{name:'mouse'});
+  root.querySelector('#zoomReset').onclick=perform('action',{name:'zoom_reset'});
+  root.querySelector('#board').onclick=perform('action',{name:'board'});
+  root.querySelector('#visibility').onclick=perform('action',{name:'toggle_visibility'});
+  root.querySelectorAll('[data-action]').forEach(el=>el.onclick=perform('action',{name:el.dataset.action}));
+  root.querySelector('#orientationToggle').onclick=async()=>{await setToolbarPanel(null);await run('configure',{preferences:{...preferences(),layout:preferences().layout==='vertical'?'horizontal':'vertical'}});};
+  root.querySelector('#clear').onclick = async () => {
+    const el=root.querySelector('#clear');
+    if(el.dataset.armed){delete el.dataset.armed;el.classList.remove('armed');await setToolbarPanel(null);run('action',{name:'clear'});}
+    else{el.dataset.armed='1';el.classList.add('armed');error('전체 지우기를 한 번 더 누르면 현재 화면의 필기와 GIF 기록이 초기화됩니다.');setTimeout(()=>{delete el.dataset.armed;el.classList.remove('armed');},3000);}
   };
-  root.querySelectorAll('[data-tool]').forEach(el => el.onclick = async () => {
-    if (!state) return;
+  root.querySelectorAll('[data-tool]').forEach(el=>el.onclick=async()=>{
+    if(!state)return;
+    await setToolbarPanel(null);
     const p=preferences();
-    await run('set_tool',{tool:el.dataset.tool,color:state.color,width:el.dataset.tool === 'text' && !['marker','eraser','zoom'].includes(state.tool) ? state.width : el.dataset.tool === 'eraser' ? p.eraser_width : el.dataset.tool === 'marker' ? p.marker_width : p.pen_width});
-    if(!state.drawing) await run('action',{name:'toggle'});
+    await run('set_tool',{tool:el.dataset.tool,color:state.color,width:el.dataset.tool==='text'&&!['marker','eraser','zoom'].includes(state.tool)?state.width:el.dataset.tool==='eraser'?p.eraser_width:el.dataset.tool==='marker'?p.marker_width:p.pen_width});
+    if(!state.drawing)await run('action',{name:'toggle'});
   });
-  root.querySelectorAll('[data-color]').forEach(el => el.onclick = () => state && run('set_tool',{tool:state.tool,color:el.dataset.color,width:state.width}));
+  root.querySelectorAll('[data-color]').forEach(el=>el.onclick=()=>state&&run('set_tool',{tool:state.tool,color:el.dataset.color,width:state.width}));
   root.querySelector('#customColor').oninput=event=>state&&run('set_tool',{tool:state.tool,color:event.target.value,width:state.width});
-  const thickness=root.querySelector('#thickness'),menu=root.querySelector('#thicknessMenu');
-  const closeSizes=()=>{menu.hidden=true;thickness.setAttribute('aria-expanded','false');};
-  thickness.onclick=()=>{
-    if(!menu.hidden){closeSizes();return;}
-    menu.hidden=false;thickness.setAttribute('aria-expanded','true');
-    const r=thickness.getBoundingClientRect();
-    menu.style.left=Math.max(4,Math.min(r.x,innerWidth-menu.offsetWidth-4))+'px';
-    menu.style.top=Math.max(4,Math.min(r.bottom+4,innerHeight-menu.offsetHeight-4))+'px';
-  };
-  document.addEventListener('pointerdown',e=>{if(!e.target.closest('.thickness-control'))closeSizes();});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.hidden){e.preventDefault();e.stopImmediatePropagation();closeSizes();thickness.focus();}},true);
-  window.addEventListener('blur',closeSizes);window.addEventListener('resize',closeSizes);
-  root.querySelectorAll('[data-size]').forEach(el=>el.onclick=async()=>{if(state)await run('set_tool',{tool:state.tool,color:state.color,width:Number(el.dataset.size)});closeSizes();thickness.focus();});
-  root.querySelector('#capture').onclick=()=>run('request_capture');
-  root.querySelector('#gifExport').onclick=startGif;
+  root.querySelectorAll('[data-size]').forEach(el=>el.onclick=()=>state&&run('set_tool',{tool:state.tool,color:state.color,width:Number(el.dataset.size)}));
+  root.querySelector('#capture').onclick=perform('request_capture');
+  root.querySelector('#gifExport').onclick=async()=>{await setToolbarPanel(null);startGif();};
+  document.addEventListener('pointerdown',e=>{if(toolbarPanel&&!e.target.closest('.toolbar-panel,[data-panel]'))setToolbarPanel(null);});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&toolbarPanel){e.preventDefault();e.stopImmediatePropagation();setToolbarPanel(null,true);}},true);
+  // Native color pickers temporarily blur the webview; preserve the color panel.
+  window.addEventListener('blur',()=>{if(toolbarPanel&&document.activeElement?.id!=='customColor')setToolbarPanel(null);});
+  window.addEventListener('resize',positionToolbarPanel);
 }
 function updateToolbar() {
-  document.body.dataset.layout=preferences().layout;
-  document.body.dataset.lines=String(preferences().toolbar_lines);document.documentElement.style.setProperty('--toolbar-lines',preferences().toolbar_lines);
+  const layout=preferences().layout;
+  if(document.body.dataset.layout&&document.body.dataset.layout!==layout&&toolbarPanel)setToolbarPanel(null);
+  document.body.dataset.layout=layout;
+  root.querySelector('.toolbar').setAttribute('aria-orientation',layout);
+  const rotate=root.querySelector('#orientationToggle');rotate.title=layout==='vertical'?'가로로 전환':'세로로 전환';rotate.setAttribute('aria-label',rotate.title);
+
   root.querySelector('#board').classList.toggle('active',state.board==='white'||state.board==='black');root.querySelector('#board').disabled=state.capturing||!state.connected;root.querySelector('#board').title='보드 전환 · 현재 '+({white:'화이트보드',black:'블랙보드'}[state.board]||'화면');
   root.querySelector('#zoomReset').disabled=!state.zoom||state.capturing;
   root.querySelector('#mode').classList.toggle('active',!state.drawing);
   root.querySelector('#mode').disabled = !state.connected;
   const eye=root.querySelector('#visibility'),visible=state.visible!==false;
-  eye.innerHTML=icon(visible?'eye':'eyeOff');eye.title=visible?'판서 숨기기':'판서 보이기';eye.setAttribute('aria-label',eye.title);eye.setAttribute('aria-pressed',String(visible));eye.classList.toggle('active',!visible);eye.disabled=state.capturing||!state.connected;
-  root.querySelectorAll('[data-tool]').forEach(el=>{const binding=preferences().keybindings[el.dataset.tool],label=shortcutDefinitions.find(([id])=>id===el.dataset.tool)?.[1]||el.dataset.tool;el.title=label+(preferences().tool_shortcuts&&binding?.enabled?' ('+displayChord(binding.key)+')':'');el.classList.toggle('active',state.drawing && el.dataset.tool===state.tool);el.disabled=!state.connected;});
+  eye.innerHTML=icon(visible?'eye':'eyeOff')+'<span>'+t(visible?'판서 숨기기':'판서 보이기')+'</span>';eye.title=visible?'판서 숨기기':'판서 보이기';eye.setAttribute('aria-label',eye.title);eye.setAttribute('aria-pressed',String(visible));eye.classList.toggle('active',!visible);eye.disabled=state.capturing||!state.connected;
+  root.querySelectorAll('[data-tool]').forEach(el=>{const binding=preferences().keybindings[el.dataset.tool],label=shortcutDefinitions.find(([id])=>id===el.dataset.tool)?.[1]||el.dataset.tool;el.title=label+(preferences().tool_shortcuts&&binding?.enabled?' ('+displayChord(binding.key)+')':'');el.classList.toggle('active',state.drawing && el.dataset.tool===state.tool);el.setAttribute('aria-pressed',String(state.drawing&&el.dataset.tool===state.tool));el.disabled=!state.connected;});
   root.querySelectorAll('[data-slot]').forEach(el=>{const c=preferences().palette[Number(el.dataset.slot)];el.dataset.color=c;el.style.setProperty('--swatch',c);el.title=t('색상 {value}').replace('{value}',c);el.setAttribute('aria-label',el.title);el.classList.toggle('selected',c.toLowerCase()===state.color.toLowerCase());});
-  root.querySelector('.thickness-dot').style.setProperty('--dot',Math.max(3,state.width*.65)+'px');
-  root.querySelector('#thickness').disabled=!state.connected;
+  root.querySelector('.thickness-dot').style.setProperty('--dot',Math.max(3,Math.min(14,state.width*.65))+'px');
+  root.querySelector('.current-color').style.setProperty('--current-color',state.color);
+  root.querySelector('#widthValue').textContent=state.width;root.querySelector('#sizeValue').textContent=state.width+' px';
+  root.querySelector('#styleToggle').disabled=!state.connected;
+  root.querySelector('#mode').setAttribute('aria-pressed',String(!state.drawing));
+  const shapes=root.querySelector('#shapesToggle'),extraTool=['line','rectangle','ellipse','select','fade','zoom'].includes(state.tool);
+  shapes.classList.toggle('active',state.drawing&&extraTool);shapes.innerHTML=icon(extraTool?state.tool:'shapes');
   root.querySelector('.custom-color').classList.toggle('selected',!preferences().palette.some(c=>c.toLowerCase()===state.color.toLowerCase()));
   root.querySelectorAll('[data-size]').forEach(el=>{el.classList.toggle('selected',Number(el.dataset.size)===state.width);el.setAttribute('aria-pressed',String(Number(el.dataset.size)===state.width));});
   root.querySelector('#customColor').value=state.color;
   root.querySelector('#capture').disabled=state.capturing||!state.connected;
   const gif=root.querySelector('#gifExport');gif.disabled=!gifRunning&&(state.capturing||!state.hasRecording);gif.title=gifRunning?'GIF 내보내기 취소':'GIF 내보내기';
-  root.querySelector('#toolbarShortcut').textContent=preferences().global_shortcut_enabled?shortcutLabel(preferences().shortcut):'전역 단축키 꺼짐';
+  root.querySelector('#mode').title=t('마우스 모드')+(preferences().global_shortcut_enabled?' · '+shortcutLabel(preferences().shortcut):'');
   root.querySelector('#undo').disabled=!state.canUndo; root.querySelector('#redo').disabled=!state.canRedo;
   const monitor = state.monitors.find(m=>m.id===state.selected);
-  root.querySelector('#modeLabel').textContent = monitor ? `${!visible?'◌ 판서 숨김':state.tool==='zoom'&&state.drawing?'확대할 영역을 드래그':state.drawing ? '● 필기 중' : '○ 마우스 모드'}${state.zoom?' · x'+state.zoom.scale.toFixed(1):''} · ${monitor.name}` : '모니터 연결 끊김 · 설정에서 선택';
+  root.querySelector('.grip').title = monitor ? `${!visible?'◌ 판서 숨김':state.tool==='zoom'&&state.drawing?'확대할 영역을 드래그':state.drawing ? '● 필기 중' : '○ 마우스 모드'}${state.zoom?' · x'+state.zoom.scale.toFixed(1):''} · ${monitor.name}` : '모니터 연결 끊김 · 설정에서 선택';
 }
 function mountSettings() {
   root.innerHTML = `<div class="settings"><header><div class="logo">on<span>•</span></div><div><h1>OnPen</h1><p>필요한 화면에만, 가볍게.</p></div><span class="version">v0.1.0</span><button type="button" id="closeSettings" class="panel-close" title="닫기" aria-label="닫기">${icon('close')}</button></header>
@@ -192,7 +228,7 @@ function mountSettings() {
   <p class="description">선택한 화면에만 필기창이 표시됩니다.<br>다른 모니터는 평소처럼 사용할 수 있어요.</p>
   <div id="monitors" role="radiogroup" aria-label="필기할 모니터"></div>
   <div id="connection" class="connection"></div><p id="warning" class="warning" hidden></p>
-  <section class="preference-section"><h2>도구막대</h2><div class="setting-row"><span>방향</span><div class="segmented"><button data-layout="horizontal">가로</button><button data-layout="vertical">세로</button></div></div><div class="setting-row"><span>줄 수</span><div class="segmented"><button data-lines="1">1줄</button><button data-lines="2">2줄</button><button data-lines="3">3줄</button></div></div><p class="hint">도구막대의 점 무늬를 잡고 원하는 위치로 이동하세요.</p></section>
+  <section class="preference-section"><h2>도구막대</h2><div class="setting-row"><span>방향</span><div class="segmented"><button data-layout="horizontal">가로</button><button data-layout="vertical">세로</button></div></div><p class="hint">도구막대의 점 무늬를 잡고 원하는 위치로 이동하세요.</p></section>
   <section class="preference-section"><h2>색상 팔레트</h2><p class="hint">앞의 5칸은 자주 쓰는 색으로 설정하세요. 마지막 칸은 도구막대에서 자유색을 선택합니다.</p><div class="palette-settings">${defaults.palette.map((c,i)=>`<label class="preset-setting"><input type="color" data-preset="${i}" aria-label="기본 색상 ${i+1}" value="${c}"><span>색상 ${i+1}</span></label>`).join('')}<div class="preset-setting picker-info"><span class="picker-sample"></span><span>자유색 · 컬러 피커</span></div></div></section>
   <section class="preference-section"><h2>필기 도구</h2>${[['pen_width','펜 · 도형'],['marker_width','형광펜'],['eraser_width','지우개']].map(([key,label])=>`<div class="setting-row"><span>${label} 기본 굵기</span>${sizes(key,defaults[key])}</div>`).join('')}
   <div class="setting-row"><label for="textFont">텍스트 글꼴</label><select id="textFont" aria-label="텍스트 글꼴"><option value="Malgun Gothic">Malgun Gothic</option></select></div><div class="font-actions"><button type="button" id="importFont" class="outline">TTF 파일 추가</button><span id="fontStatus" class="hint" role="status"></span></div><p class="hint">시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다. 글자 크기는 펜 굵기 5단계에 따라 16·24·40·72·104px입니다. 입력 중 Enter는 완료, Shift+Enter는 줄바꿈, Escape는 취소입니다.</p><div class="setting-row"><label for="opacity">형광펜 불투명도</label><div class="range-value"><input id="opacity" type="range" min="10" max="80" step="5"><output id="opacityValue"></output></div></div></section>
@@ -229,7 +265,6 @@ function mountSettings() {
   root.querySelector('#textFont').onchange=event=>update({text_font:event.target.value});
   refreshFonts();
   root.querySelector('#importFont').onclick=async()=>{const button=root.querySelector('#importFont');button.disabled=true;try{if(!native){error('데스크톱 앱으로 실행하세요.');return;}const font=await invoke('import_font');if(font){await refreshFonts();await update({text_font:font.family});}}catch(e){error(e);}finally{button.disabled=false;}};
-  root.querySelectorAll('[data-lines]').forEach(el=>el.onclick=()=>update({toolbar_lines:Number(el.dataset.lines)}));
   root.querySelectorAll('[data-preset]').forEach(el=>el.onchange=()=>{const palette=[...preferences().palette];palette[Number(el.dataset.preset)]=el.value;update({palette});});
   root.querySelectorAll('[data-layout]').forEach(el=>el.onclick=()=>update({layout:el.dataset.layout}));
   root.querySelectorAll('[data-size-group]').forEach(group=>group.querySelectorAll('[data-size]').forEach(el=>el.onclick=()=>update({[group.dataset.sizeGroup]:Number(el.dataset.size)})));
@@ -269,7 +304,6 @@ function updateSettings() {
   const p=preferences();
   root.querySelector('#spotRadius').value=p.spotlight_radius;root.querySelector('#spotDim').value=p.spotlight_dim*100;root.querySelector('#spotScale').value=p.spotlight_scale;
   root.querySelector('#language').value=p.language;
-  root.querySelectorAll('[data-lines]').forEach(el=>{el.classList.toggle('active',Number(el.dataset.lines)===p.toolbar_lines);el.setAttribute('aria-pressed',String(Number(el.dataset.lines)===p.toolbar_lines));});
   root.querySelector('#theme').value=p.theme;
   if(document.activeElement!==root.querySelector('#textFont'))root.querySelector('#textFont').value=p.text_font;
   root.querySelector('#fadeSeconds').value=p.fade_seconds;root.querySelectorAll('[data-board]').forEach(el=>{el.classList.toggle('active',el.dataset.board===(state.board||'screen'));el.disabled=state.capturing||!state.connected;});
@@ -392,7 +426,7 @@ async function startGif(){
  if(gifRunning){gifCancelled=true;return;}if(!state||state.capturing)return;
  if(!native){error('GIF 저장은 데스크톱 앱에서 사용할 수 있습니다.');return;}
  gifRunning=true;gifCancelled=false;const initial=structuredClone(state);initial.preferences=preferences();
- const report=text=>{if(view==='settings')root.querySelector('#gifProgress').textContent=text;else{const el=root.querySelector('#gifExport');el.title=t('{value} · 클릭하면 취소').replace('{value}',t(text));root.querySelector('#modeLabel').textContent=text;}};
+ const report=text=>{if(view==='settings')root.querySelector('#gifProgress').textContent=text;else{const el=root.querySelector('#gifExport');if(el)el.title=t('{value} · 클릭하면 취소').replace('{value}',t(text));error(t(text));}};
  try{await ensureFonts();const path=await exportGif({invoke,state:initial,onProgress:p=>report(`GIF 저장 ${p}%`),cancelled:()=>gifCancelled});report('저장됨: '+path);error('GIF 저장 완료');}catch(e){report(e instanceof Error?e.message:String(e));error(e);}finally{gifRunning=false;receive(await invoke('snapshot'));}
 }
 document.addEventListener('keydown',event=>{

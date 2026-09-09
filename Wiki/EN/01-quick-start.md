@@ -10,7 +10,7 @@
 1. Download the Windows x64 installer or portable ZIP from [Releases](https://github.com/BAEM1N/layerpen/releases/latest).
 2. Run the installer, or extract the ZIP completely and open `OnPen.exe`. Keep the bundled notices and STT files together.
 3. Close older OnPen instances. Windows needs WebView2; the installer can obtain it.
-4. Open the gear / **on** button and select the monitor to annotate.
+4. Open the **Settings** gear button and select the monitor to annotate.
 
 ## Your first annotation
 1. Choose the pen, a color, and a width, then drag over the screen.

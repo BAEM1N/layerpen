@@ -19,6 +19,26 @@ pub fn position(toolbar:Rect, area:Rect, width:i32,height:i32,gap:i32)->(i32,i32
  }
 }
 
-// 32 cells, 36 px buttons, 5 px gaps, 20 px padding/border, margins + caption.
-pub fn toolbar_size(vertical:bool,lines:u8)->(f64,f64){let cross=lines.clamp(1,3) as u32;let long=32_u32.div_ceil(cross);let extent=|n:u32|(n*41+15) as f64;let (cols,rows)=if vertical{(cross,long)}else{(long,cross)};(extent(cols)+12.,extent(rows)+28.)}
-#[cfg(test)]mod layout_tests{use super::*;#[test]fn all_six_layouts(){for lines in 1..=3{let (w,h)=toolbar_size(false,lines);let (vw,vh)=toolbar_size(true,lines);assert_eq!(w-12.,vh-28.);assert_eq!(h-28.,vw-12.);assert!(w>0.&&h>0.);}}}
+// One primary strip with 36 px controls. Detail panels extend the cross axis.
+pub fn toolbar_size(vertical: bool) -> (f64, f64) {
+    if vertical { (64., 660.) } else { (660., 64.) }
+}
+pub fn toolbar_panel_size(vertical: bool, open: bool) -> (f64, f64) {
+    let (width, height) = toolbar_size(vertical);
+    let extra = if open { 280. } else { 0. };
+    if vertical { (width + extra, height) } else { (width, height + extra) }
+}
+#[cfg(test)]
+mod layout_tests {
+    use super::*;
+    #[test]
+    fn two_orientations_keep_a_single_strip_and_expand_only_across_it() {
+        assert_eq!(toolbar_size(false), (660., 64.));
+        assert_eq!(toolbar_size(true), (64., 660.));
+        assert_eq!(toolbar_panel_size(false, true), (660., 344.));
+        assert_eq!(toolbar_panel_size(true, true), (344., 660.));
+        for vertical in [false, true] {
+            assert_eq!(toolbar_panel_size(vertical, false), toolbar_size(vertical));
+        }
+    }
+}

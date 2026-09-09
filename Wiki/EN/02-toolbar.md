@@ -6,22 +6,35 @@
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 
-## Six layouts
-1. Open settings with the gear / **on** button.
-2. Under **Toolbar**, choose Horizontal or Vertical.
-3. Select 1, 2, or 3 lines: rows horizontally, columns vertically.
-4. Drag the dotted grip to move the toolbar. Use more lines if one line is too long.
+## Horizontal or vertical
 
-![Actual vertical toolbars with one, two, and three columns](../assets/toolbar-layouts.jpg)
+1. Use the toolbar's **Horizontal/Vertical** switch to change direction. You can also choose the direction under **Toolbar** in settings.
+2. Drag the dotted grip to move the toolbar.
 
-The image shows the three vertical variants. The direction setting produces three horizontal variants. Long controls may need scrolling on small displays.
+![OnPen toolbar in horizontal and vertical orientations](../assets/toolbar-layouts.jpg)
+
+## Find a tool
+
+| Location | Tools |
+| --- | --- |
+| Main toolbar | Mouse, pen, highlighter, text, eraser |
+| Shapes menu | Line, rectangle, ellipse, select, fading ink, region zoom |
+| Color and width panel | Drawing color and the current tool's width |
+| Main toolbar | Undo, redo, spotlight, CC captions |
+| More menu | Board, hide ink, exit zoom, screenshot, GIF, clear all, share materials |
+| End of toolbar | Horizontal/Vertical switch, settings, quit |
+
+The Shapes, Color, and More menus open as panels beside the toolbar.
 
 ## Docked settings
+
 Settings opens beside the toolbar and follows its position. At a screen edge it moves to the available side within the work area. Small displays can cause overlap. The panel X closes settings; the final toolbar X quits the app.
 
 ## Theme and palette
-Choose an app theme in settings. This changes controls; the drawing palette is separate. Set the first five slots to frequently used colors; the last toolbar slot accepts a custom color. Changing the palette does not recolor existing ink.
+
+Choose an app theme in settings. This changes controls; the drawing palette is separate. Open the Color and width panel to choose drawing colors. Set the first five slots to frequently used colors; the last slot accepts a custom color. Changing the palette does not recolor existing ink.
 
 ## Language
-The selected language applies to app windows and persists. Experimental captions currently use a Korean/English panel. If controls are cut off, change the layout or move the toolbar away from an edge.
+
+The selected language applies to app windows and persists. Experimental captions currently use a Korean/English panel. If controls are cut off, change direction or move the toolbar away from an edge.
 

@@ -436,7 +436,6 @@ pub struct Preferences {
     pub theme: String,
     pub monitor: Option<String>,
     pub layout: String,
-    pub toolbar_lines: u8,
     pub pen_width: f64,
     pub marker_width: f64,
     pub eraser_width: f64,
@@ -464,7 +463,6 @@ impl Default for Preferences {
             theme: "blue".into(),
             monitor: None,
             layout: "horizontal".into(),
-            toolbar_lines: 2,
             pen_width: 4.,
             marker_width: 16.,
             eraser_width: 24.,
@@ -515,7 +513,6 @@ impl Preferences {
                 self.gif_background.as_str(),
                 "screen" | "white" | "dark" | "transparent"
             )
-            && (1..=3).contains(&self.toolbar_lines)
             && matches!(self.layout.as_str(), "horizontal" | "vertical")
             && self.palette.iter().all(|c| {
                 c.len() == 7 && c.starts_with('#') && c[1..].bytes().all(|b| b.is_ascii_hexdigit())
@@ -978,6 +975,33 @@ mod tests {
         assert!(restored.valid());
         custom.palette[0] = "invalid".into();
         assert!(!custom.valid());
+    }
+    #[test]
+    fn legacy_toolbar_lines_are_ignored_without_losing_preferences() {
+        for layout in ["horizontal", "vertical"] {
+            for lines in 1..=3 {
+                let legacy = serde_json::json!({
+                    "layout": layout,
+                    "toolbar_lines": lines,
+                    "monitor": "display-b",
+                    "pen_width": 7.,
+                    "text_font": "Arial",
+                    "theme": "blue"
+                });
+                let p: Preferences = serde_json::from_value(legacy).unwrap();
+                assert!(p.valid());
+                assert_eq!(p.layout, layout);
+                assert_eq!(p.monitor.as_deref(), Some("display-b"));
+                assert_eq!(p.pen_width, 7.);
+                assert_eq!(p.text_font, "Arial");
+                let saved = serde_json::to_value(&p).unwrap();
+                assert!(saved.get("toolbar_lines").is_none());
+                let restored: Preferences = serde_json::from_value(saved).unwrap();
+                assert!(restored.valid());
+                assert_eq!(restored.layout, layout);
+                assert_eq!(restored.pen_width, 7.);
+            }
+        }
     }
     #[test]
     fn language_preferences_persist_and_reject_unknown_values() {

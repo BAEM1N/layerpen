@@ -6,7 +6,7 @@ OnPen은 선생님, 발표자, 개발자를 위한 무료 MIT 라이선스 화�
 
 [English](README.md) · **[Windows 다운로드](https://github.com/BAEM1N/layerpen/releases/latest)** · [한국어 사용 가이드](Wiki/KR/README.md) · [버그 제보](https://github.com/BAEM1N/layerpen/issues/new?template=bug_report.md)
 
-![OnPen의 세로 3열 툴바, 형광펜, 원과 화살표로 예제 수업 화면을 설명하는 UI](Wiki/assets/onpen-overview.jpg)
+![OnPen의 간결한 툴바, 형광펜, 원과 화살표로 예제 수업 화면을 설명하는 UI](Wiki/assets/onpen-overview.jpg)
 
 *실제 앱 UI와 필기 렌더러를 예제 데이터로 캡처한 브라우저 미리보기입니다. 실제 화면 공유 검증 영상이 아닙니다. 기존 MP4는 재구성 전까지 공개 목록에서 제외했습니다.*
 
@@ -26,7 +26,7 @@ WebView2가 필요합니다. 설치 프로그램에서 런타임을 받을 수 �
 ## 1분 시작
 
 1. OnPen을 설치하거나 포터블 ZIP을 풀어 실행합니다.
-2. 툴바의 톱니바퀴 또는 on 버튼으로 설정을 열고 모니터를 선택합니다.
+2. 툴바의 톱니바퀴 **설정** 버튼을 열고 모니터를 선택합니다.
 3. 펜으로 그리거나 T 아이콘을 누른 뒤 화면을 클릭해 글자를 입력합니다.
 4. Ctrl+Shift+D로 필기와 마우스 조작을 전환합니다.
 5. 필요한 내용은 종료 전에 PNG 또는 GIF로 내보냅니다. 필기 기록은 재실행 시 복구되지 않습니다.
@@ -37,7 +37,7 @@ WebView2가 필요합니다. 설치 프로그램에서 런타임을 받을 수 �
 | --- | --- | --- |
 | 펜·형광펜·도형 | 슬라이드와 다이어그램 위에 강조 | [필기](Wiki/KR/03-drawing.md) |
 | 텍스트·설치 글꼴·TTF | 화면 원하는 곳에 글자 입력 | [텍스트와 글꼴](Wiki/KR/04-text-fonts.md) |
-| 6가지 툴바 배치 | 가로/세로 × 1/2/3줄 | [툴바](Wiki/KR/02-toolbar.md) |
+| 가로·세로 툴바 | 자주 쓰는 도구는 바로, 도형·색상·더보기는 툴바 옆 패널에서 | [툴바](Wiki/KR/02-toolbar.md) |
 | 툴바 옆 설정·5가지 테마 | 작업 흐름과 화면 색상 조절 | [설정](Wiki/KR/02-toolbar.md) |
 | 선택·이동·크기·실행 취소 | 완성한 필기 조정 | [편집](Wiki/KR/03-drawing.md) |
 | 부분 확대·보드·사라지는 잉크 | 수업과 발표의 강조 | [확대와 보드](Wiki/KR/05-zoom-boards.md) |

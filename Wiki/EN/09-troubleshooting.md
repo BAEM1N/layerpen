@@ -10,7 +10,7 @@
 Check the selected monitor and drawing/mouse mode. Use the toolbar if the global shortcut conflicts. Ink stays in screen coordinates and does not track a scrolling document. In a meeting, confirm the participant view: sharing an app window can omit the overlay. Compatibility with every meeting application is not verified.
 
 ## Toolbar or exit button seems missing
-Open settings and change direction or line count. Move the grip away from a screen edge; long layouts can scroll. The final toolbar X quits the app, while the settings X only closes its panel. Save ink first.
+Change direction with the toolbar's Horizontal/Vertical switch or in settings, then move the grip away from a screen edge. Shapes, Color, and More tools open in panels beside the toolbar. The final toolbar X quits the app, while the settings X only closes its panel. Save ink first.
 
 ## Font is missing or characters differ
 Restart after installing system fonts. Import a valid TTF if the font manager does not expose it to system scanning. Choose a font covering your language; missing glyphs use fallback. The browser preview font list is not the native font inventory.

@@ -13,7 +13,7 @@ OnPen is a free, MIT-licensed desktop screen annotation tool for teachers, prese
 [![Desktop checks](https://github.com/BAEM1N/layerpen/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/BAEM1N/layerpen/actions/workflows/check.yml)
 [![GitHub stars](https://img.shields.io/github/stars/BAEM1N/layerpen?style=flat)](https://github.com/BAEM1N/layerpen/stargazers)
 
-![OnPen screen annotation UI with a highlighter, blue circle, arrow, and three-column toolbar over a sample lesson](Wiki/assets/onpen-overview.jpg)
+![OnPen screen annotation UI with a highlighter, blue circle, arrow, and compact toolbar over a sample lesson](Wiki/assets/onpen-overview.jpg)
 
 *Actual OnPen UI and drawing renderer, captured in browser preview with sample content. This is not a native screen-sharing test. The previous MP4 demo is withdrawn while its replacement is redesigned.*
 
@@ -33,7 +33,7 @@ Windows needs WebView2. The installer can obtain that runtime. Current builds ar
 ## Start in one minute
 
 1. Install OnPen, or extract the portable ZIP and open `OnPen.exe`.
-2. Open the toolbar's **gear / on** button and choose the monitor to annotate.
+2. Open the toolbar's **Settings** gear button and choose the monitor to annotate.
 3. Click **Pen** and draw. Click the **T** icon to type at a point on screen.
 4. Press **Ctrl+Shift+D** to switch between drawing and using the app underneath.
 5. Save a **PNG** or **GIF** before quitting. Ink and replay history are not saved between sessions.
@@ -46,7 +46,7 @@ Windows needs WebView2. The installer can obtain that runtime. Current builds ar
 | --- | --- | --- |
 | Pen, highlighter, shapes | Mark slides, explain a diagram, highlight a point | [Drawing](Wiki/EN/03-drawing.md) |
 | Typed text + fonts | Click to type; choose an installed font or import a TTF | [Text and fonts](Wiki/EN/04-text-fonts.md) |
-| Six toolbar layouts | Horizontal or vertical, with 1, 2, or 3 lines | [Toolbar](Wiki/EN/02-toolbar.md) |
+| Horizontal or vertical toolbar | Keep everyday tools visible; open shapes, colors, and more beside the toolbar | [Toolbar](Wiki/EN/02-toolbar.md) |
 | Docked settings + five themes | Keep controls beside the toolbar and choose the app color | [Settings](Wiki/EN/02-toolbar.md) |
 | Select, move, resize, undo | Adjust whole annotations without drawing them again | [Editing ink](Wiki/EN/03-drawing.md) |
 | Frozen-region zoom | Magnify a detail and annotate it | [Zoom and boards](Wiki/EN/05-zoom-boards.md) |
@@ -102,7 +102,7 @@ The product was renamed to **OnPen**. The existing GitHub URL and application id
 
 | Milestone | Focus |
 | --- | --- |
-| v0.1 Windows beta | Annotation, fonts, six layouts, spotlight, experimental LAN sharing and captions |
+| v0.1 Windows beta | Annotation, fonts, horizontal/vertical toolbar, spotlight, experimental LAN sharing and captions |
 | v0.2 Mac validation | Retina / multiple displays, permissions, input, audio, Apple Silicon evaluation |
 | Distribution improvements | Signed releases, store feasibility, broader reproducible testing |
 

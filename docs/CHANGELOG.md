@@ -3,7 +3,7 @@
 - Rebrand app and release assets to OnPen, keeping storage compatibility.
 - Add five persistent app themes and click-to-type text.
 - List installed fonts and import persistent TTF assets for text and exports.
-- Offer all six toolbar layouts: horizontal/vertical × 1/2/3 lines.
+- Simplify the toolbar to horizontal/vertical rails, grouped tools and attached detail panels. Preserve old direction settings while retiring line counts.
 - Use OnPen capture paths, native executable name, icons and video; migrate legacy capture defaults.
 - Improve toolbar, add CC shortcut, dock settings beside toolbar and follow movement.
 - Experimental captions: microphone/device selection, local CPU and compatible GPU/NPU probing, optional cloud API keys.

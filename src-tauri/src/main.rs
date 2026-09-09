@@ -102,7 +102,7 @@ fn place_toolbar(app: &tauri::AppHandle, s: &Session) -> Result<()> {
         .get_webview_window("toolbar")
         .ok_or("Toolbar unavailable")?;
     let vertical = s.prefs.layout == "vertical";
-    let (natural_width,natural_height)=docking::toolbar_size(vertical,s.prefs.toolbar_lines);
+    let (natural_width,natural_height)=docking::toolbar_size(vertical);
     let width=natural_width.min(m.width as f64/m.scale-16.).max(48.);
     let height=natural_height.min(m.height as f64/m.scale-48.).max(48.);
     toolbar
@@ -122,6 +122,33 @@ fn place_toolbar(app: &tauri::AppHandle, s: &Session) -> Result<()> {
         .set_position(PhysicalPosition::new(x, y))
         .map_err(|e| e.to_string())?;
     toolbar.show().map_err(|e| e.to_string())
+}
+#[tauri::command]
+async fn toolbar_panel(app: tauri::AppHandle, open: bool) -> Result<()> {
+    let vertical = {
+        let state = app.state::<Shared>();
+        let s = state.lock().map_err(|e| e.to_string())?;
+        s.prefs.layout == "vertical"
+    };
+    let toolbar = app.get_webview_window("toolbar").ok_or("Toolbar unavailable")?;
+    let monitor = toolbar.current_monitor().map_err(|e| e.to_string())?
+        .ok_or("Toolbar monitor unavailable")?;
+    let scale = monitor.scale_factor();
+    let area = monitor.work_area();
+    let current = toolbar.outer_position().map_err(|e| e.to_string())?;
+    let (natural_width, natural_height) = docking::toolbar_panel_size(vertical, open);
+    let width = natural_width.min(area.size.width as f64 / scale);
+    let height = natural_height.min(area.size.height as f64 / scale);
+    let max_x = area.position.x + area.size.width as i32 - (width * scale).round() as i32;
+    let max_y = area.position.y + area.size.height as i32 - (height * scale).round() as i32;
+    let x = current.x.clamp(area.position.x, max_x.max(area.position.x));
+    let y = current.y.clamp(area.position.y, max_y.max(area.position.y));
+    toolbar.set_size(LogicalSize::new(width, height)).map_err(|e| e.to_string())?;
+    toolbar.set_position(PhysicalPosition::new(x, y)).map_err(|e| e.to_string())?;
+    if app.get_webview_window("settings").is_some_and(|w| w.is_visible().unwrap_or(false)) {
+        dock_settings(&app)?;
+    }
+    Ok(())
 }
 fn place(app: &tauri::AppHandle, s: &mut Session) -> Result<()> {
     s.drawing = false;
@@ -346,7 +373,7 @@ async fn configure(app: tauri::AppHandle, mut preferences: Preferences) -> Resul
     }
     s.prefs = preferences;
     let result = (|| {
-        if s.prefs.layout != previous.layout || s.prefs.toolbar_lines != previous.toolbar_lines {
+        if s.prefs.layout != previous.layout {
             place_toolbar(&app, &s)?;
         }
         save(&app, &s.prefs)
@@ -362,7 +389,10 @@ async fn configure(app: tauri::AppHandle, mut preferences: Preferences) -> Resul
     if changed_shortcut && previous.global_shortcut_enabled {
         let _ = app.global_shortcut().unregister(previous.shortcut.as_str());
     }
-    s.width = s.prefs.width_for(&s.tool);
+    let configured_width = s.prefs.width_for(&s.tool);
+    if configured_width != previous.width_for(&s.tool) {
+        s.width = configured_width;
+    }
     publish(&app, &s)
 }
 #[tauri::command]
@@ -510,7 +540,7 @@ fn main() {
                 if let Ok(mut s) = state.lock() { let enabled = !s.drawing; if let Err(e) = drawing(app,&mut s,enabled) { s.warning = Some(e); } let _ = publish(app,&s); };
             }
         }).build())
-        .invoke_handler(tauri::generate_handler![spotlight::spotlight_toggle,spotlight::spotlight_status,sharing::share_live,sharing::share_open,sharing::share_status,sharing::share_start,sharing::share_stop,sharing::share_add,sharing::share_remove,fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
+        .invoke_handler(tauri::generate_handler![toolbar_panel,spotlight::spotlight_toggle,spotlight::spotlight_status,sharing::share_live,sharing::share_open,sharing::share_status,sharing::share_start,sharing::share_stop,sharing::share_add,sharing::share_remove,fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
         .setup(|app| {
             let prefs = settings_path(app.handle()).ok().and_then(|p|std::fs::read(p).ok()).or_else(||{
                 if std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")).is_some(){return None;}
@@ -538,7 +568,7 @@ fn main() {
             WebviewWindowBuilder::new(app,"toolbar",WebviewUrl::App("index.html?view=toolbar".into()))
                 .parent(&overlay)?
                 .data_directory(webview_data(app.handle())?)
-                .title("OnPen").inner_size(600.,122.).decorations(false).transparent(true).shadow(false)
+                .title("OnPen").inner_size(660.,64.).decorations(false).transparent(true).shadow(false)
                 .always_on_top(true).resizable(false).focused(false).build()?;
             WebviewWindowBuilder::new(app,"settings",WebviewUrl::App("index.html?view=settings".into()))
                 .parent(&overlay)?.always_on_top(true)

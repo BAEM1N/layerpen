@@ -3,7 +3,7 @@
 Captured from OnPen v0.1 source on 2026-09-09. JPEG is the browser capture tool's returned format; files are stored without visual alteration.
 
 - `kr-*` / `en-*`: actual settings UI in a 520×700 iframe. Language controls were used to select Korean or English. Example monitors and font lists are browser-preview placeholders, not detected native hardware.
-- `toolbar-layouts.jpg`: actual vertical toolbar UI with 1, 2, and 3 columns.
+- `toolbar-layouts.jpg`: actual horizontal and vertical toolbar UI with the attached tools panel.
 - `onpen-overview.jpg`: actual toolbar and drawing renderer over an authored example lesson. This is a documentation composition, not a native desktop screenshot.
 - `captions-*`: actual bilingual caption settings, no API key, microphone recording, or cloud session.
 - `sharing-settings.jpg`: actual bilingual sharing settings, server disabled in browser preview.
