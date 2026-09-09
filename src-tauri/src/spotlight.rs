@@ -10,7 +10,7 @@ pub fn spotlight_status(app:tauri::AppHandle)->bool{app.state::<SpotlightState>(
 pub async fn spotlight_toggle(app:tauri::AppHandle)->Result<()> {
  if spotlight_status(app.clone()){stop(&app);return Ok(());}
  let display=app.state::<super::Shared>().lock().map_err(|e|e.to_string())?.selected().ok_or("Select a monitor")?.clone();
- let window=if let Some(w)=app.get_webview_window("spotlight"){w}else{WebviewWindowBuilder::new(&app,"spotlight",WebviewUrl::App("spotlight.html".into())).title("OnPen · Spotlight").transparent(true).decorations(false).shadow(false).always_on_top(true).skip_taskbar(true).focused(false).visible(false).build().map_err(|e|e.to_string())?};
+ let window=if let Some(w)=app.get_webview_window("spotlight"){w}else{WebviewWindowBuilder::new(&app,"spotlight",WebviewUrl::App("spotlight.html".into())).title("Pointory · Spotlight").transparent(true).decorations(false).shadow(false).always_on_top(true).skip_taskbar(true).focused(false).visible(false).build().map_err(|e|e.to_string())?};
  window.set_ignore_cursor_events(true).map_err(|e|e.to_string())?;
  #[cfg(target_os="windows")]
  window.set_content_protected(true).map_err(|e|e.to_string())?;

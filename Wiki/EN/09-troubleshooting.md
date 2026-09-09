@@ -1,8 +1,8 @@
 # Troubleshooting and limitations
 
-[OnPen](../../README.md) · [Guide index](README.md) · [KR](../KR/09-troubleshooting.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [KR](../KR/09-troubleshooting.md)
 
-![OnPen — Troubleshooting and limitations](../assets/en-overview.jpg)
+![Pointory — Troubleshooting and limitations](../assets/en-overview.jpg)
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 
@@ -19,8 +19,8 @@ Restart after installing system fonts. Import a valid TTF if the font manager do
 For export, choose a writable folder and check disk space. For captions, verify the optional Python environment, audio device, permissions, model download, and selected backend. API keys and compatible models are your provider account's configuration. See [captions](07-live-captions.md).
 
 ## Old product names
-OnPen is the product name. The repository URL and application identifier retain historical names for link/upgrade compatibility. Old default capture paths are migrated in preferences without moving your files. Custom paths remain. Ink and replay history are not saved across restarts.
+Pointory is the product name, and the repository is `BAEM1N/pointory`. The internal application identifier retains its historical value for upgrade compatibility. Settings and imported fonts from OnPen are migrated on first launch. Old default capture paths are migrated in preferences without moving your files. Custom paths remain. Ink and replay history are not saved across restarts.
 
 ## Report a useful bug
-Use [Issues](https://github.com/BAEM1N/layerpen/issues/new?template=bug_report.md). Include OnPen version, OS, monitor layout/scaling, exact steps, expected vs actual result, and a redacted screenshot. Never include API keys or private documents. Windows is the shipped binary target; macOS/Linux native testing and cloud-key validation remain limited.
+Use [Issues](https://github.com/BAEM1N/pointory/issues/new?template=bug_report.md). Include Pointory version, OS, monitor layout/scaling, exact steps, expected vs actual result, and a redacted screenshot. Never include API keys or private documents. Windows is the shipped binary target; macOS/Linux native testing and cloud-key validation remain limited.
 

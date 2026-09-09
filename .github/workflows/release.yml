@@ -23,6 +23,6 @@ jobs:
       - run: python scripts/package-release.py --output ../release-assets
       - uses: actions/upload-artifact@v4
         with:
-          name: OnPen-windows-release
+          name: Pointory-windows-release
           path: ../release-assets/*
           if-no-files-found: error

@@ -1,4 +1,4 @@
-# Contributing to OnPen
+# Contributing to Pointory
 
 Thank you for helping make screen annotation useful during real conversations.
 
@@ -16,4 +16,4 @@ Use synthetic slides or redact private material. Do not upload meeting recording
 4. For coordinate/input changes, check zoom, mixed DPI, erasing, selection, and export. For native behavior, record the platform actually tested.
 5. Document untested cases instead of claiming cross-platform support from a successful compile.
 
-Project-authored contributions use the MIT license. Keep upstream notices with third-party code. Open an issue or pull request in the hosting repository once one is published; no public repository URL is configured yet.
+Project-authored contributions use the MIT license. Keep upstream notices with third-party code. Open an [issue](https://github.com/BAEM1N/pointory/issues) or [pull request](https://github.com/BAEM1N/pointory/pulls) in the Pointory repository.

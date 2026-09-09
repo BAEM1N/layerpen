@@ -1,12 +1,12 @@
-# OnPen — 오픈소스 화면 필기와 실시간 자막
+# Pointory — 오픈소스 화면 필기와 실시간 자막
 
 **화면 위에 쓰고, 텍스트를 더하고, 설명을 이어가세요.**
 
-OnPen은 선생님, 발표자, 개발자를 위한 무료 MIT 라이선스 화면 필기 도구입니다. 선택한 모니터 위에 펜·형광펜·도형·텍스트를 표시하고, 필기를 남긴 채 원래 프로그램을 조작할 수 있습니다. 실시간 자막은 별도 실행 환경이 필요한 실험 기능입니다.
+Pointory(포인토리)는 선생님, 발표자, 개발자를 위한 무료 MIT 라이선스 화면 필기 도구입니다. 선택한 모니터 위에 펜·형광펜·도형·텍스트를 표시하고, 필기를 남긴 채 원래 프로그램을 조작할 수 있습니다. 실시간 자막은 별도 실행 환경이 필요한 실험 기능입니다.
 
-[English](README.md) · **[Windows 다운로드](https://github.com/BAEM1N/layerpen/releases/latest)** · [한국어 사용 가이드](Wiki/KR/README.md) · [버그 제보](https://github.com/BAEM1N/layerpen/issues/new?template=bug_report.md)
+[English](README.md) · **[Windows 다운로드](https://github.com/BAEM1N/pointory/releases/latest)** · [한국어 사용 가이드](Wiki/KR/README.md) · [버그 제보](https://github.com/BAEM1N/pointory/issues/new?template=bug_report.md)
 
-![OnPen의 간결한 툴바, 형광펜, 원과 화살표로 예제 수업 화면을 설명하는 UI](Wiki/assets/onpen-overview.jpg)
+![Pointory의 간결한 툴바, 형광펜, 원과 화살표로 예제 수업 화면을 설명하는 UI](Wiki/assets/pointory-overview.jpg)
 
 *실제 앱 UI와 필기 렌더러를 예제 데이터로 캡처한 브라우저 미리보기입니다. 실제 화면 공유 검증 영상이 아닙니다. 기존 MP4는 재구성 전까지 공개 목록에서 제외했습니다.*
 
@@ -14,18 +14,18 @@ OnPen은 선생님, 발표자, 개발자를 위한 무료 MIT 라이선스 화�
 
 | 플랫폼 | 파일 | 상태 |
 | --- | --- | --- |
-| Windows x64 | [설치 EXE](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/OnPen_0.1.0_x64-setup.exe) | v0.1.0 베타 |
-| Windows x64 | [포터블 ZIP](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/OnPen-0.1.0-windows-x64-portable.zip) | 압축을 풀고 OnPen.exe 실행 |
+| Windows x64 | [설치 EXE](https://github.com/BAEM1N/pointory/releases/download/v0.1.0/Pointory_0.1.0_x64-setup.exe) | v0.1.0 베타 |
+| Windows x64 | [포터블 ZIP](https://github.com/BAEM1N/pointory/releases/download/v0.1.0/Pointory-0.1.0-windows-x64-portable.zip) | 압축을 풀고 Pointory.exe 실행 |
 | macOS | 검증된 DMG 없음 | v0.2에서 실제 환경 검증 예정 |
 | Linux | 배포 바이너리 없음 | X11 개발 대상, Wayland 미지원 |
 
-[체크섬](https://github.com/BAEM1N/layerpen/releases/download/v0.1.0/SHA256SUMS.txt) · [릴리스 노트](https://github.com/BAEM1N/layerpen/releases/tag/v0.1.0)
+[체크섬](https://github.com/BAEM1N/pointory/releases/download/v0.1.0/SHA256SUMS.txt) · [릴리스 노트](https://github.com/BAEM1N/pointory/releases/tag/v0.1.0)
 
 WebView2가 필요합니다. 설치 프로그램에서 런타임을 받을 수 있습니다. 현재 설치본은 미서명 베타이며 자동 업데이트는 없습니다. 이전 앱을 종료한 뒤 새 버전을 실행하세요. **일반 필기에는 Python이 필요 없습니다.**
 
 ## 1분 시작
 
-1. OnPen을 설치하거나 포터블 ZIP을 풀어 실행합니다.
+1. Pointory를 설치하거나 포터블 ZIP을 풀어 실행합니다.
 2. 툴바의 톱니바퀴 **설정** 버튼을 열고 모니터를 선택합니다.
 3. 펜으로 그리거나 T 아이콘을 누른 뒤 화면을 클릭해 글자를 입력합니다.
 4. Ctrl+Shift+D로 필기와 마우스 조작을 전환합니다.
@@ -46,7 +46,7 @@ WebView2가 필요합니다. 설치 프로그램에서 런타임을 받을 수 �
 | 교실 브라우저 공유 | 같은 네트워크 자료 다운로드·선택적 실시간 화면 | [자료 공유](Wiki/KR/10-classroom-sharing.md) |
 | 실험적 실시간 자막 | 입력 장치와 STT 제공자 선택 | [자막](Wiki/KR/07-live-captions.md) |
 
-Epic Pen이나 ZoomIt 같은 화면 필기 도구의 오픈소스 대안을 찾는 분이라면 OnPen의 선택 모니터 오버레이, 텍스트, 툴바 구성을 살펴보세요. 해당 제품과 제휴한 프로젝트는 아닙니다.
+Epic Pen이나 ZoomIt 같은 화면 필기 도구의 오픈소스 대안을 찾는 분이라면 Pointory의 선택 모니터 오버레이, 텍스트, 툴바 구성을 살펴보세요. 해당 제품과 제휴한 프로젝트는 아닙니다.
 
 ## 알아둘 동작
 
@@ -72,4 +72,4 @@ v0.2는 Mac의 화면·권한·오디오·Apple Silicon 경로를 실제로 검�
 
 ## 라이선스와 이름
 
-프로젝트 코드는 [MIT](LICENSE) 라이선스입니다. 의존성은 [각 라이선스](THIRD-PARTY-NOTICES.txt)를 따릅니다. 제품명은 OnPen이며 기존 GitHub 주소와 앱 식별자는 업그레이드 호환성을 위해 유지합니다. 새 기본 저장 위치는 Pictures/OnPen입니다.
+프로젝트 코드는 [MIT](LICENSE) 라이선스입니다. 의존성은 [각 라이선스](THIRD-PARTY-NOTICES.txt)를 따릅니다. 제품명은 Pointory(포인토리), 저장소는 `BAEM1N/pointory`입니다. 이전 OnPen·LayerPen 설정과 가져온 글꼴을 이어받으며 내부 앱 식별자는 업그레이드 호환성을 위해 유지합니다. 새 기본 저장 위치는 Pictures/Pointory입니다. 도메인 상태는 [브랜드 안내](docs/BRAND.md)를 참고하세요.

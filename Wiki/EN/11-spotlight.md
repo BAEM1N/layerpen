@@ -1,8 +1,8 @@
 # Cursor spotlight and circular magnifier
 
-[OnPen](../../README.md) · [Guide index](README.md) · [한국어](../KR/11-spotlight.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [한국어](../KR/11-spotlight.md)
 
-![OnPen spotlight settings](../assets/spotlight-settings.jpg)
+![Pointory spotlight settings](../assets/spotlight-settings.jpg)
 
 *Actual settings UI in browser preview. The example below applies the real spotlight rendering code to an authored lesson; it demonstrates highlighting, not verified native magnification.*
 
@@ -30,6 +30,6 @@ Preferences persist, but spotlight does not automatically start on launch. The e
 
 Windows repeatedly captures the area inside the lens. Cursor positions update more frequently than the magnified image, which refreshes at intervals of at least approximately 125 ms. Fast movement and video can lag. Near an edge, the captured source region is clamped inside the monitor. Capture-protected content may not magnify correctly.
 
-Mac/Linux currently apply highlighting without magnification and still require native validation. The Windows effect window is excluded from capture to prevent capturing itself. OnPen's LAN live view reapplies the effect to outgoing frames. Do not assume normal PNG/GIF export or another meeting/recording app includes it. Verify the actual monitor scaling, projector, and student device before presenting.
+Mac/Linux currently apply highlighting without magnification and still require native validation. The Windows effect window is excluded from capture to prevent capturing itself. Pointory's LAN live view reapplies the effect to outgoing frames. Do not assume normal PNG/GIF export or another meeting/recording app includes it. Verify the actual monitor scaling, projector, and student device before presenting.
 
 This is an independent implementation using a normal mouse cursor, not Logitech hardware pairing or remote-button integration.

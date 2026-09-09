@@ -5,7 +5,7 @@ about: Report a reproducible problem
 
 ## Environment
 
-- LayerPen version:
+- Pointory version:
 - OS and version:
 - Monitors and scaling/DPI:
 - Input device:

@@ -1,8 +1,8 @@
 # Text and fonts
 
-[OnPen](../../README.md) · [Guide index](README.md) · [KR](../KR/04-text-fonts.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [KR](../KR/04-text-fonts.md)
 
-![OnPen — Text and fonts](../assets/en-text-fonts.jpg)
+![Pointory — Text and fonts](../assets/en-text-fonts.jpg)
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 
@@ -18,7 +18,7 @@ There is no default T keyboard shortcut. Input methods such as Korean IME are su
 At normal zoom, widths 2 / 4 / 8 / 16 / 24 produce text sizes 16 / 24 / 40 / 72 / 104 px. New text uses the current font and width. Existing text retains its stored font and size. Zoom uses source coordinates to maintain display sizing.
 
 ## Installed fonts and TTF
-The native app scans standard system font directories. Restart OnPen after installing a new font. Fonts only activated inside another font manager may not appear. The screenshot's short preview list is a placeholder, not an inventory of installed fonts.
+The native app scans standard system font directories. Restart Pointory after installing a new font. Fonts only activated inside another font manager may not appear. The screenshot's short preview list is a placeholder, not an inventory of installed fonts.
 
-To add a file, use the TTF import button and select a valid `.ttf` up to 32 MB. OnPen copies it into its own configuration folder; it does not install it system-wide. Duplicate content reuses the same font ID. Imported fonts work in text, PNG, and GIF. Missing characters may use system fallback, so choose a font covering your language and check an export.
+To add a file, use the TTF import button and select a valid `.ttf` up to 32 MB. Pointory copies it into its own configuration folder; it does not install it system-wide. Duplicate content reuses the same font ID. Imported fonts work in text, PNG, and GIF. Missing characters may use system fallback, so choose a font covering your language and check an export.
 

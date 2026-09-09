@@ -1,10 +1,10 @@
-# OnPen 사용 안내
+# Pointory 사용 안내
 
 선택한 모니터에 판서하는 무료 MIT 오픈소스 앱입니다. 강의·온라인 화면 공유·프로그램 시연에 사용할 수 있습니다.
 
 ## 설치와 언어
 
-[GitHub Releases](https://github.com/BAEM1N/layerpen/releases)에서 Windows 설치 EXE 또는 포터블 ZIP을 받으세요. 포터블은 압축을 풀고 `OnPen.exe`를 실행합니다. Microsoft WebView2가 필요합니다. 설치파일은 서명되지 않은 베타입니다.
+[GitHub Releases](https://github.com/BAEM1N/pointory/releases)에서 Windows 설치 EXE 또는 포터블 ZIP을 받으세요. 포터블은 압축을 풀고 `Pointory.exe`를 실행합니다. Microsoft WebView2가 필요합니다. 설치파일은 서명되지 않은 베타입니다.
 
 설정 → 언어에서 한국어·영어·일본어·중국어 간체를 선택합니다. 기본값은 시스템 언어이며 지원하지 않는 언어는 영어로 표시합니다. 선택은 모든 창에 즉시 적용되고 다음 실행에도 유지됩니다.
 
@@ -34,7 +34,7 @@ PNG는 화면+판서 또는 투명 판서 레이어로 저장합니다. GIF는 �
 
 [English guide](GETTING-STARTED.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
 
-## OnPen v0.1 갱신
+## Pointory v0.1 갱신
 
 설정은 툴바 옆에 붙습니다. 툴바는 가로·세로 두 방향을 제공하며 회전 버튼 또는 설정에서 전환합니다. 도형, 색상과 굵기, 더보기 버튼을 누르면 관련 기능이 툴바 옆 패널에 표시됩니다. 화면보다 긴 경우 툴바를 스크롤합니다. 툴바 끝 X는 앱 종료입니다.
 

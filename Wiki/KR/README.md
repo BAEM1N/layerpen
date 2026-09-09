@@ -1,6 +1,6 @@
-# OnPen 사용 가이드
+# Pointory 사용 가이드
 
-[OnPen](../../README.md) · [KR / EN](../README.md)
+[Pointory](../../README.md) · [KR / EN](../README.md)
 
 스크린샷과 함께 기능별 설정, 사용 순서, 제한 사항을 설명합니다.
 
@@ -16,4 +16,4 @@
 - [같은 네트워크 자료 공유와 실시간 화면](10-classroom-sharing.md)
 - [커서 스포트라이트와 원형 확대](11-spotlight.md)
 
-[Screenshot provenance](../assets/README.md) · [Report a bug](https://github.com/BAEM1N/layerpen/issues)
+[Screenshot provenance](../assets/README.md) · [Report a bug](https://github.com/BAEM1N/pointory/issues)

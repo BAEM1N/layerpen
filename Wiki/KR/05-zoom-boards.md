@@ -1,8 +1,8 @@
 # 확대·보드·강조 잉크
 
-[OnPen](../../README.md) · [Guide index](README.md) · [EN](../EN/05-zoom-boards.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [EN](../EN/05-zoom-boards.md)
 
-![OnPen — 확대·보드·강조 잉크](../assets/kr-board-zoom.jpg)
+![Pointory — 확대·보드·강조 잉크](../assets/kr-board-zoom.jpg)
 
 *v0.1 실제 UI의 예제 데이터 기반 브라우저 미리보기이며 네이티브 실행 검증 화면은 아닙니다.*
 

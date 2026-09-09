@@ -1,8 +1,8 @@
 # 툴바와 색상 설정
 
-[OnPen](../../README.md) · [Guide index](README.md) · [EN](../EN/02-toolbar.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [EN](../EN/02-toolbar.md)
 
-![OnPen — 툴바와 색상 설정](../assets/kr-toolbar-settings.jpg)
+![Pointory — 툴바와 색상 설정](../assets/kr-toolbar-settings.jpg)
 
 *v0.1 실제 UI의 예제 데이터 기반 브라우저 미리보기이며 네이티브 실행 검증 화면은 아닙니다.*
 
@@ -11,7 +11,7 @@
 1. 툴바의 **가로/세로 전환** 버튼으로 방향을 바꿉니다. 설정의 **도구막대**에서도 선택할 수 있습니다.
 2. 점 무늬 손잡이를 잡아 툴바를 이동합니다.
 
-![가로와 세로 방향의 OnPen 툴바](../assets/toolbar-layouts.jpg)
+![가로와 세로 방향의 Pointory 툴바](../assets/toolbar-layouts.jpg)
 
 ## 도구 찾기
 

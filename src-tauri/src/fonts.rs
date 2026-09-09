@@ -13,7 +13,7 @@ fn read_font(path:&std::path::Path)->Result<Vec<u8>,String>{
  if bytes.len() as u64>LIMIT{return Err("Font file must be smaller than 32 MB".into());}Ok(bytes)
 }
 fn valid_id(id:&str)->bool{id.len()==64&&id.bytes().all(|b|b.is_ascii_hexdigit())}
-fn asset(id:String,bytes:Vec<u8>)->Result<Font,String>{let name=names(bytes).into_iter().next().ok_or("Invalid or unsupported font file")?;Ok(Font{family:format!("OnPenFont-{id}"),id,name})}
+fn asset(id:String,bytes:Vec<u8>)->Result<Font,String>{let name=names(bytes).into_iter().next().ok_or("Invalid or unsupported font file")?;Ok(Font{family:format!("PointoryFont-{id}"),id,name})}
 #[tauri::command]
 pub async fn font_assets(app:tauri::AppHandle)->Result<Vec<Font>,String>{
  let dir=directory(&app)?;tauri::async_runtime::spawn_blocking(move||{
@@ -37,5 +37,5 @@ pub async fn import_font(app:tauri::AppHandle)->Result<Option<Font>,String>{
 }
 #[cfg(test)]mod tests{use super::*;
  #[test]fn rejects_paths_and_invalid_font_data(){assert!(!valid_id("../settings"));assert!(!valid_id(&"z".repeat(64)));assert!(valid_id(&"a".repeat(64)));assert!(asset("a".repeat(64),b"not a font".to_vec()).is_err());}
- #[test]fn installed_font_can_be_imported(){let mut db=fontdb::Database::new();db.load_system_fonts();if let Some(face)=db.faces().next(){let bytes=db.with_face_data(face.id,|data,_|data.to_vec()).unwrap();let id=format!("{:x}",Sha256::digest(&bytes));let font=asset(id.clone(),bytes).unwrap();assert_eq!(font.family,format!("OnPenFont-{id}"));assert!(!font.name.is_empty());};}
+ #[test]fn installed_font_can_be_imported(){let mut db=fontdb::Database::new();db.load_system_fonts();if let Some(face)=db.faces().next(){let bytes=db.with_face_data(face.id,|data,_|data.to_vec()).unwrap();let id=format!("{:x}",Sha256::digest(&bytes));let font=asset(id.clone(),bytes).unwrap();assert_eq!(font.family,format!("PointoryFont-{id}"));assert!(!font.name.is_empty());};}
 }

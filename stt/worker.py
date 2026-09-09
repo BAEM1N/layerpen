@@ -15,6 +15,7 @@ os.environ.setdefault('OPENBLAS_NUM_THREADS', '1')
 os.environ.setdefault('OMP_NUM_THREADS', '4')
 import numpy as np
 from providers import DEFAULT_MODELS, Protocol, SttError
+from acceleration import environment_value
 
 STOP = threading.Event()
 OUTPUT_LOCK = threading.Lock()
@@ -151,7 +152,7 @@ def recognizer(config):
     if config['provider'] == 'whisper':
         from faster_whisper import WhisperModel
         engine = WhisperModel(model, device=selected, compute_type='float16' if selected == 'cuda' else 'int8', cpu_threads=4,
-                              download_root=os.environ.get('ONPEN_MODEL_DIR') or os.environ.get('LAYERPEN_MODEL_DIR'))
+                              download_root=environment_value('MODEL_DIR'))
         emit('accelerator', device=selected, text='Whisper · ' + selected)
         def transcribe(audio):
             parts, _ = engine.transcribe(audio, language=language, beam_size=3,
@@ -276,7 +277,7 @@ async def cloud(config):
 
 def main():
     config = json.loads(sys.stdin.readline())
-    if os.environ.get('ONPEN_STT_DIAGNOSTICS',os.environ.get('LAYERPEN_STT_DIAGNOSTICS')) == '1':
+    if environment_value('STT_DIAGNOSTICS') == '1':
         import faulthandler
         faulthandler.dump_traceback_later(30, repeat=False)
     if config.get('command') == 'devices':

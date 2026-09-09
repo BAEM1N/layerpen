@@ -107,7 +107,7 @@ function receive(next) {
   const language=next.preferences?.language||'auto';
   if(language!==localeChoice){
     localeChoice=language;setLanguage(language);
-    document.title=t(view==='settings'?'OnPen · 설정':view==='overlay'?'OnPen · 필기':'OnPen');
+    document.title=t(view==='settings'?'Pointory · 설정':view==='overlay'?'Pointory · 필기':'Pointory');
     if(native) native.window.getCurrentWindow().setTitle(document.title).catch(error);
   }
   if(view==='overlay')loadZoomImage(next.zoom?.id);
@@ -222,7 +222,7 @@ function updateToolbar() {
   root.querySelector('.grip').title = monitor ? `${!visible?'◌ 판서 숨김':state.tool==='zoom'&&state.drawing?'확대할 영역을 드래그':state.drawing ? '● 필기 중' : '○ 마우스 모드'}${state.zoom?' · x'+state.zoom.scale.toFixed(1):''} · ${monitor.name}` : '모니터 연결 끊김 · 설정에서 선택';
 }
 function mountSettings() {
-  root.innerHTML = `<div class="settings"><header><div class="logo">on<span>•</span></div><div><h1>OnPen</h1><p>필요한 화면에만, 가볍게.</p></div><span class="version">v0.1.0</span><button type="button" id="closeSettings" class="panel-close" title="닫기" aria-label="닫기">${icon('close')}</button></header>
+  root.innerHTML = `<div class="settings"><header><div class="logo"><img src="brand.svg" alt="Pointory"></div><div><h1>Pointory</h1><p>필요한 화면에만, 가볍게.</p></div><span class="version">v0.1.0</span><button type="button" id="closeSettings" class="panel-close" title="닫기" aria-label="닫기">${icon('close')}</button></header>
   <section class="language-setting"><label for="language">언어</label><select id="language">${Object.entries(languages).map(([code,label])=>`<option value="${code}" ${code==='auto'?'':'data-i18n-skip'}>${code==='auto'?'시스템 언어':label}</option>`).join('')}</select><p class="hint">언어는 모든 창에 즉시 적용되며 다음 실행에도 유지됩니다.</p></section>
   <div class="section-heading"><div><span class="eyebrow">WORKSPACE</span><h2>필기할 모니터</h2></div><button id="identify" class="outline">${icon('monitor')} 화면 식별</button></div>
   <p class="description">선택한 화면에만 필기창이 표시됩니다.<br>다른 모니터는 평소처럼 사용할 수 있어요.</p>
@@ -453,10 +453,10 @@ async function start() {
   try{await ensureFonts();}catch(e){error(e);}
   localization=localizeDocument();
   if(view==='identify'){
-    if(native){const snapshot=await invoke('snapshot');setLanguage(snapshot.preferences?.language||'auto');applyTheme(snapshot.preferences?.theme);await native.window.getCurrentWindow().setTitle(t('OnPen · 화면 식별'));}
+    if(native){const snapshot=await invoke('snapshot');setLanguage(snapshot.preferences?.language||'auto');applyTheme(snapshot.preferences?.theme);await native.window.getCurrentWindow().setTitle(t('Pointory · 화면 식별'));}
     root.innerHTML='<div class="identify-number"></div>';root.firstChild.textContent=params.get('number')||'1';return;
   }
-  if(!native&&params.get('preview')!=='1') {root.innerHTML='<div class="launch-message"><h1>OnPen</h1><p>이 화면은 데스크톱 앱에서 실행해야 합니다.</p><p>README의 실행 방법을 확인하세요.</p></div>';return;}
+  if(!native&&params.get('preview')!=='1') {root.innerHTML='<div class="launch-message"><h1>Pointory</h1><p>이 화면은 데스크톱 앱에서 실행해야 합니다.</p><p>README의 실행 방법을 확인하세요.</p></div>';return;}
   if(view==='toolbar')mountToolbar();else if(view==='overlay')mountOverlay();else mountSettings();
   if(native){
     await native.event.listen('fonts-changed',async()=>{try{await ensureFonts();if(view==='settings')await refreshFonts();schedulePaint();}catch(e){error(e);}});

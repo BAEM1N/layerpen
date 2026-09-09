@@ -12,19 +12,20 @@ if out==root or root in out.parents: raise SystemExit('Release output must be ou
 out.mkdir(parents=True,exist_ok=True)
 version=json.loads((root/'package.json').read_text())['version']
 target=Path(os.environ.get('CARGO_TARGET_DIR',str(root/'src-tauri/target'))).resolve()/'release'
-setup=target/'bundle/nsis'/f'OnPen_{version}_x64-setup.exe'
-binary=target/'onpen.exe'
+setup=target/'bundle/nsis'/f'Pointory_{version}_x64-setup.exe'
+binary=target/'pointory.exe'
 assert setup.is_file() and binary.is_file(), 'Build the Windows installer first.'
 shutil.copy2(setup,out/setup.name)
 resources={'LICENSE':root/'LICENSE','THIRD-PARTY-NOTICES.txt':root/'THIRD-PARTY-NOTICES.txt','third-party-sources.zip':root/'third-party-sources.zip'}
+resources['LICENSE.tauri']=root/'src-tauri/windows/LICENSE.tauri'
 for name in ['GETTING-STARTED.md','INSTALL.ko.md','USER-GUIDE.ko.md','README.ja.md','README.zh-CN.md','STT-SETUP.md']:
  resources[name]=root/'docs'/name
-with ZipFile(out/f'OnPen-{version}-windows-x64-portable.zip','w',ZIP_DEFLATED) as z:
- z.write(binary,'OnPen/OnPen.exe')
- for name,path in resources.items():z.write(path,'OnPen/'+name)
+with ZipFile(out/f'Pointory-{version}-windows-x64-portable.zip','w',ZIP_DEFLATED) as z:
+ z.write(binary,'Pointory/Pointory.exe')
+ for name,path in resources.items():z.write(path,'Pointory/'+name)
  for path in (root/'stt').glob('*'):
-  if path.suffix in {'.py','.txt','.ps1'} and not path.name.startswith(('test_','benchmark')):z.write(path,'OnPen/stt/'+path.name)
-files=[out/setup.name,out/f'OnPen-{version}-windows-x64-portable.zip']
+  if path.suffix in {'.py','.txt','.ps1'} and not path.name.startswith(('test_','benchmark')):z.write(path,'Pointory/stt/'+path.name)
+files=[out/setup.name,out/f'Pointory-{version}-windows-x64-portable.zip']
 for f in files:
  if f.suffix=='.zip':
   with ZipFile(f) as z:assert z.testzip() is None

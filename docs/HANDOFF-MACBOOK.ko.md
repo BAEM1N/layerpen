@@ -1,4 +1,8 @@
-# OnPen v0.2 Mac 검증 준비
+# Pointory(포인토리) v0.2 Mac 검증 준비
+
+현재 제품명은 **Pointory(포인토리)**이며 저장소는 [BAEM1N/pointory](https://github.com/BAEM1N/pointory)입니다. 처음 받을 때는 `git clone https://github.com/BAEM1N/pointory.git` 후 `cd pointory`로 이동합니다. Rust 패키지/바이너리는 `pointory`, 내부 앱 식별자는 업그레이드 호환을 위해 `dev.personal.monitorink`를 유지합니다. 기본 저장 폴더는 Pictures/Pointory이며 `POINTORY_DATA_DIR`를 우선 사용합니다. 이전 환경변수와 설정은 호환됩니다.
+
+`pointory.app`은 우선 도메인 후보이며 아직 구매·DNS 연결·사이트 배포를 하지 않았습니다.
 
 현재 Windows v0.1 갱신: 테마 5종, 텍스트, 도킹 설정, 실시간 자막 실험 기능. Mac에서 빌드가 통과해도 화면 필기·마이크·GPU/ANE 실행은 별도 검증해야 합니다.
 
@@ -23,7 +27,7 @@ Xcode Command Line Tools, Rust, Node, Python 환경은 접속 후 확인하고 �
 참고: https://v2.tauri.app/start/prerequisites/
 
 ---
-아래는 이전 인수인계 기록이며 최신 상태는 위 내용과 README를 우선합니다.
+아래는 OnPen 시기의 이전 인수인계 기록입니다. 당시 제품명·배포 구성·영상·도메인·검증 내용을 보존한 것이며, 현재 사용법이나 배포 상태로 해석하지 마세요. 최신 상태는 위 내용과 README를 우선합니다.
 
 # 맥북 인계 — OnPen
 

@@ -21,7 +21,7 @@ jobs:
       - run: cargo build --locked --release --manifest-path src-tauri/Cargo.toml --features custom-protocol
       - uses: actions/upload-artifact@v4
         with:
-          name: OnPen-${{ matrix.os }}
+          name: Pointory-${{ matrix.os }}
           path: |
-            src-tauri/target/release/onpen
-            src-tauri/target/release/onpen.exe
+            src-tauri/target/release/pointory
+            src-tauri/target/release/pointory.exe

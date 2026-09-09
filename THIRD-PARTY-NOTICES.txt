@@ -1,10 +1,15 @@
-OnPen 0.1.0 — third-party dependency notices
+Pointory 0.1.0 — third-party dependency notices
 
 Generated from the Windows x64 Cargo dependency graph, including build dependencies.
-Dependencies retain their own licenses. OnPen does not modify the included crate sources.
+Dependencies retain their own licenses. Pointory does not modify the included crate sources.
 MPL-2.0 source packages are included in third-party-sources.zip in this distribution.
 Additional exact-revision license provenance: docs/dependency-licenses/sources.json in the project source.
 WebView2 is a separately installed Microsoft runtime.
+
+Windows installer template: Tauri CLI 2.11.4 (MIT).
+Source: https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.4/crates/tauri-bundler/src/bundle/windows/nsis/installer.nsi
+Pointory preserves the previous OnPen installer registry keys for upgrade compatibility.
+The full copyright and permission notice is included as LICENSE.tauri in this distribution.
 
 ========================================================================
 adler2 2.0.1
@@ -51717,4 +51722,3 @@ freely, subject to the following restrictions:
 2. Altered source versions must be plainly marked as such, and must not be
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
-

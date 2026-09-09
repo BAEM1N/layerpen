@@ -1,8 +1,8 @@
 # PNG and GIF export
 
-[OnPen](../../README.md) · [Guide index](README.md) · [KR](../KR/06-export.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [KR](../KR/06-export.md)
 
-![OnPen — PNG and GIF export](../assets/en-export.jpg)
+![Pointory — PNG and GIF export](../assets/en-export.jpg)
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 
@@ -12,7 +12,7 @@
 3. Click the camera button or press **Ctrl+Shift+S**.
 4. Open the saved image and check the selected monitor and content.
 
-The default folder is Pictures/OnPen. Old default product folders are migrated in preferences; existing files are not moved. A custom folder remains unchanged. The native capture excludes the toolbar.
+The default folder is Pictures/Pointory. Old default product folders are migrated in preferences; existing files are not moved. A custom folder remains unchanged. The native capture excludes the toolbar.
 
 ## Export an ink replay GIF
 1. Start a clean demonstration after clearing old ink/history if needed.

@@ -8,6 +8,7 @@ mod captions;
 mod capture;
 mod geometry;
 mod model;
+mod profile;
 mod zoom;
 use model::*;
 use std::{sync::Mutex, time::Duration};
@@ -18,20 +19,19 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 type Shared = Mutex<Session>;
 type Result<T> = std::result::Result<T, String>;
 
+fn profile_override() -> Option<std::path::PathBuf> {
+    profile::override_directory(|key| std::env::var_os(key))
+}
 fn settings_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf> {
-    if let Some(root) = std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")) {
-        return Ok(std::path::PathBuf::from(root).join("settings.json"));
-    }
+    if let Some(root) = profile_override() { return Ok(root.join("settings.json")); }
     Ok(app
         .path()
         .config_dir()
         .map_err(|e| e.to_string())?
-        .join("OnPen").join("settings.json"))
+        .join("Pointory").join("settings.json"))
 }
 fn webview_data(app: &tauri::AppHandle) -> Result<std::path::PathBuf> {
-    if let Some(root) = std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")) {
-        return Ok(std::path::PathBuf::from(root).join("webview"));
-    }
+    if let Some(root) = profile_override() { return Ok(root.join("webview")); }
     app.path().app_local_data_dir().map_err(|e| e.to_string())
 }
 fn save(app: &tauri::AppHandle, prefs: &Preferences) -> Result<()> {
@@ -503,7 +503,7 @@ async fn identify(app: tauri::AppHandle) -> Result<()> {
             &label,
             WebviewUrl::App(format!("index.html?view=identify&number={}", i + 1).into()),
         )
-        .title("OnPen · 화면 식별")
+        .title("Pointory · 화면 식별")
         .data_directory(webview_data(&app)?)
         .inner_size(180., 130.)
         .decorations(false)
@@ -542,12 +542,10 @@ fn main() {
         }).build())
         .invoke_handler(tauri::generate_handler![toolbar_panel,spotlight::spotlight_toggle,spotlight::spotlight_status,sharing::share_live,sharing::share_open,sharing::share_status,sharing::share_start,sharing::share_stop,sharing::share_add,sharing::share_remove,fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
         .setup(|app| {
-            let prefs = settings_path(app.handle()).ok().and_then(|p|std::fs::read(p).ok()).or_else(||{
-                if std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")).is_some(){return None;}
-                app.path().app_config_dir().ok().and_then(|p|std::fs::read(p.join("settings.json")).ok())
-            }).and_then(|b|serde_json::from_slice(&b).ok()).unwrap_or_default();
+            let profile = profile_override();
+            let (directory, legacy) = profile::directories(&app.path().config_dir()?, &app.path().app_config_dir()?, profile.clone());
+            let prefs = profile::load(&directory, &legacy)?;
             let mut s = Session::new(prefs);
-            let profile = std::env::var_os("ONPEN_DATA_DIR").or_else(||std::env::var_os("MONITOR_INK_DATA_DIR")).map(std::path::PathBuf::from);
             s.prefs.migrate_capture_dir(&app.path().picture_dir()?, profile.as_deref());
             s.displays = displays(app.handle())?;
             if s.prefs.monitor.is_none() {
@@ -563,17 +561,17 @@ fn main() {
             app.manage(spotlight::SpotlightState::default());
             let overlay = WebviewWindowBuilder::new(app,"overlay",WebviewUrl::App("index.html?view=overlay".into()))
                 .data_directory(webview_data(app.handle())?)
-                .title("OnPen · 필기").decorations(false).transparent(true).shadow(false).always_on_top(true)
+                .title("Pointory · 필기").decorations(false).transparent(true).shadow(false).always_on_top(true)
                 .skip_taskbar(true).visible(false).focused(false).resizable(false).build()?;
             WebviewWindowBuilder::new(app,"toolbar",WebviewUrl::App("index.html?view=toolbar".into()))
                 .parent(&overlay)?
                 .data_directory(webview_data(app.handle())?)
-                .title("OnPen").inner_size(660.,64.).decorations(false).transparent(true).shadow(false)
+                .title("Pointory").inner_size(660.,64.).decorations(false).transparent(true).shadow(false)
                 .always_on_top(true).resizable(false).focused(false).build()?;
             WebviewWindowBuilder::new(app,"settings",WebviewUrl::App("index.html?view=settings".into()))
                 .parent(&overlay)?.always_on_top(true)
                 .data_directory(webview_data(app.handle())?)
-                .title("OnPen · 설정").inner_size(520.,700.).decorations(false).resizable(false).skip_taskbar(true).visible(false).build()?;
+                .title("Pointory · 설정").inner_size(520.,700.).decorations(false).resizable(false).skip_taskbar(true).visible(false).build()?;
             let state = app.state::<Shared>();
             let mut s = state.lock().map_err(|e| e.to_string())?;
             #[cfg(target_os="linux")]
@@ -585,7 +583,7 @@ fn main() {
             if let Err(e) = place(app.handle(), &mut s) { s.warning = Some(e); let _ = show_settings(app.handle()); }
             publish(app.handle(), &s)?;
             drop(s);
-            if std::env::var("ONPEN_CAPTIONS_OPEN").or_else(|_|std::env::var("LAYERPEN_CAPTIONS_OPEN")).as_deref() == Ok("1") {
+            if std::env::var("POINTORY_CAPTIONS_OPEN").or_else(|_|std::env::var("ONPEN_CAPTIONS_OPEN")).or_else(|_|std::env::var("LAYERPEN_CAPTIONS_OPEN")).as_deref() == Ok("1") {
                 let caption_app = app.handle().clone();
                 tauri::async_runtime::spawn(async move { let _ = captions::caption_open(caption_app).await; });
             }
@@ -622,5 +620,5 @@ fn main() {
                 }
             }
         })
-        .run(tauri::generate_context!()).expect("OnPen could not start");
+        .run(tauri::generate_context!()).expect("Pointory could not start");
 }

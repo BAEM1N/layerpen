@@ -1,3 +1,18 @@
+# Pointory v0.1.0 brand update — 2026-09-09
+
+- Rename the product, repository links, package metadata, installers, and portable assets to Pointory (포인토리).
+- Preserve the internal application identifier and migrate previous settings, imported fonts, and default capture preferences.
+- Prefer POINTORY_* environment variables while accepting legacy aliases.
+- Reuse complete legacy OpenVINO model caches and existing Windows caption environments in place.
+- Refresh the English/Korean documentation screenshots with Pointory branding; retain the old overview image for existing links.
+- Keep `pointory.app` documented as the preferred, unpurchased domain.
+
+Validation: 34 Rust, 29 JavaScript UI, and 17 Python STT tests pass (80 total); the manual browser server fixture is excluded from the default Rust run. Model-cache migration tests use mocked inference/download APIs. The Windows release and NSIS installer build, portable ZIP integrity, native toolbar/settings/GIF checks, and actual loopback student-page fixture passed. Installer upgrade/install/uninstall execution, cross-device LAN sharing, and Mac/Linux runtime validation remain pending. See the [validation record](validation/0.1.0.ko.md) for scope and updates.
+
+Earlier changes below retain the product names used at the time.
+
+---
+
 # OnPen v0.1.0 refresh — 2026-09-09
 
 - Rebrand app and release assets to OnPen, keeping storage compatibility.

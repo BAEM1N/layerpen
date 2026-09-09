@@ -8,11 +8,11 @@ process.chdir(root);
 await mkdir('out',{recursive:true});
 const serveUrl=await bundle({entryPoint:path.join(root,'src/index.jsx'),publicDir:path.join(root,'public')});
 const browserExecutable=process.env.REMOTION_BROWSER_EXECUTABLE||undefined;
-const composition=await selectComposition({serveUrl,id:'OnPenIntro',browserExecutable});
+const composition=await selectComposition({serveUrl,id:'PointoryIntro',browserExecutable});
 if(process.argv.includes('--stills')){
  for(const frame of [100,280,460,640,820,1000])await renderStill({serveUrl,composition,frame,browserExecutable,output:path.join(root,`out/frame-${frame}.png`)});
 }else{
  let last=-1;
- await renderMedia({serveUrl,composition,browserExecutable,codec:'h264',crf:18,concurrency:2,outputLocation:path.join(root,'out/OnPen-intro-v0.1.0.mp4'),onProgress:p=>{const n=Math.floor(p.progress*10);if(n!==last){last=n;console.log(`Rendering ${n*10}%`);}}});
+ await renderMedia({serveUrl,composition,browserExecutable,codec:'h264',crf:18,concurrency:2,outputLocation:path.join(root,'out/Pointory-intro-v0.1.0.mp4'),onProgress:p=>{const n=Math.floor(p.progress*10);if(n!==last){last=n;console.log(`Rendering ${n*10}%`);}}});
 }
 console.log('Render complete');

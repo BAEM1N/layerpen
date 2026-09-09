@@ -1,8 +1,8 @@
 # Toolbar and appearance
 
-[OnPen](../../README.md) · [Guide index](README.md) · [KR](../KR/02-toolbar.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [KR](../KR/02-toolbar.md)
 
-![OnPen — Toolbar and appearance](../assets/en-toolbar-settings.jpg)
+![Pointory — Toolbar and appearance](../assets/en-toolbar-settings.jpg)
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 
@@ -11,7 +11,7 @@
 1. Use the toolbar's **Horizontal/Vertical** switch to change direction. You can also choose the direction under **Toolbar** in settings.
 2. Drag the dotted grip to move the toolbar.
 
-![OnPen toolbar in horizontal and vertical orientations](../assets/toolbar-layouts.jpg)
+![Pointory toolbar in horizontal and vertical orientations](../assets/toolbar-layouts.jpg)
 
 ## Find a tool
 

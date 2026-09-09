@@ -1,15 +1,15 @@
 # Quick start
 
-[OnPen](../../README.md) · [Guide index](README.md) · [KR](../KR/01-quick-start.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [KR](../KR/01-quick-start.md)
 
-![OnPen — Quick start](../assets/en-overview.jpg)
+![Pointory — Quick start](../assets/en-overview.jpg)
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 
 ## Install and launch
-1. Download the Windows x64 installer or portable ZIP from [Releases](https://github.com/BAEM1N/layerpen/releases/latest).
-2. Run the installer, or extract the ZIP completely and open `OnPen.exe`. Keep the bundled notices and STT files together.
-3. Close older OnPen instances. Windows needs WebView2; the installer can obtain it.
+1. Download the Windows x64 installer or portable ZIP from [Releases](https://github.com/BAEM1N/pointory/releases/latest).
+2. Run the installer, or extract the ZIP completely and open `Pointory.exe`. Keep the bundled notices and STT files together.
+3. Close older Pointory instances. Windows needs WebView2; the installer can obtain it.
 4. Open the **Settings** gear button and select the monitor to annotate.
 
 ## Your first annotation

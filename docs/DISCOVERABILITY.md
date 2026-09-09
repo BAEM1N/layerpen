@@ -1,4 +1,4 @@
-# OnPen discoverability
+# Pointory discoverability
 
 The repository describes a real product category: open-source screen annotation for teaching and presentations, with typed text, spotlight, optional live captions, and experimental classroom LAN sharing. English and Korean entry points link to feature-specific guides with descriptive screenshot alt text, concrete steps, FAQs, and explicit platform limits.
 

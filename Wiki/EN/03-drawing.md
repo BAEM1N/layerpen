@@ -1,8 +1,8 @@
 # Drawing and editing
 
-[OnPen](../../README.md) · [Guide index](README.md) · [KR](../KR/03-drawing.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [KR](../KR/03-drawing.md)
 
-![OnPen — Drawing and editing](../assets/en-text-fonts.jpg)
+![Pointory — Drawing and editing](../assets/en-text-fonts.jpg)
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 
@@ -12,7 +12,7 @@
 3. Drag to draw. Line, rectangle, and ellipse tools create shapes from a drag.
 4. Switch to Mouse to operate the underlying app without clearing ink.
 
-![Real drawing renderer over a sample lesson](../assets/onpen-overview.jpg)
+![Real drawing renderer over a sample lesson](../assets/pointory-overview.jpg)
 
 ## Correct an annotation
 **Ctrl+Z** undoes and **Ctrl+Shift+Z** redoes. The eraser removes complete strokes it hits, not individual pixels. Select an annotation and drag to move it; use its handles to resize. Committed text can also be moved or resized.

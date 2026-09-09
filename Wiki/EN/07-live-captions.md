@@ -1,13 +1,13 @@
 # Live captions (experimental)
 
-[OnPen](../../README.md) · [Guide index](README.md) · [KR](../KR/07-live-captions.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [KR](../KR/07-live-captions.md)
 
-![OnPen — Live captions (experimental)](../assets/captions-local.jpg)
+![Pointory — Live captions (experimental)](../assets/captions-local.jpg)
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 
 ## Prepare local captions
-Drawing works without Python. For captions, follow [STT setup](../../docs/STT-SETUP.md) to install the worker dependencies. The Windows setup script creates a separate OnPen Python environment. Local models may need an initial download.
+Drawing works without Python. For captions, follow [STT setup](../../docs/STT-SETUP.md) to install the worker dependencies. The Windows setup script creates a separate Pointory Python environment. Local models may need an initial download.
 
 1. Open **CC** in the toolbar or Live captions in settings.
 2. Select Local Whisper and a model. Start with a small supported model.

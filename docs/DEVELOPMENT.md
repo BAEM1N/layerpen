@@ -4,6 +4,7 @@
 
 - `src-tauri/src/main.rs`: native windows, events, commands, and monitor placement.
 - `model.rs`: settings, session state, undo/redo, and replay history.
+- `profile.rs`: profile overrides, legacy settings and imported-font migration.
 - `geometry.rs`: hit testing; `zoom.rs`: frozen screen capture for zoom.
 - `capture.rs` and `animation.rs`: PNG and GIF export.
 - `ui/app.js`: toolbar/settings orchestration. Smaller modules handle drawing, selection, replay, shortcuts, boards, and zoom.
@@ -13,7 +14,7 @@ Coordinates and stroke widths are stored in original-screen space. Convert point
 
 ## Rebrand compatibility
 
-OnPen 0.1.0 changes the displayed product name and organizes documentation. The Rust package/binary `onpen`, identifier `dev.personal.monitorink`, and `ONPEN_DATA_DIR` remain for compatibility. Captures default to Pictures/OnPen; the exact previous default Pictures/MonitorInk is migrated in preferences without moving files. Custom folders remain unchanged. An old Monitor Ink installer entry may coexist with a newly named OnPen entry.
+Pointory 0.1.0 uses the Rust package/binary `pointory` and the internal identifier `dev.personal.monitorink`. Keeping that identifier preserves upgrade compatibility. Captures default to `Pictures/Pointory`; legacy default folders are migrated in preferences without moving existing files. Custom capture folders remain unchanged. The Windows NSIS template retains the existing OnPen registry identity and uses Pointory for visible names; the full upgrade/install/uninstall path still requires native validation. Older installer entries from other product names may remain.
 
 ## Release checks
 
@@ -23,4 +24,8 @@ Create a source archive with `python scripts/package-source.py /path/to/output.z
 
 See [localization](LOCALIZATION.md) for the four UI languages. Public versions start at 0.1.0 independently of the earlier local prototype sequence.
 
-New native package: `onpen`. Settings: OS config directory / OnPen / settings.json; previous identifier settings are read on first launch. Imported fonts are copied into fonts/ beside settings. The identifier itself stays unchanged for upgrade compatibility. ONPEN_* environment variables are preferred; legacy names are input aliases. Capture defaults migrate LayerPen, InkLatch, Inklach, MonitorInk and Monitor Ink under Pictures, without moving existing exports or changing custom directories.
+Settings use the OS configuration directory / Pointory / settings.json. On first launch, settings and imported fonts are migrated from OnPen or earlier identifier-based locations. Imported fonts live in fonts/ beside settings. Capture defaults recognize OnPen, LayerPen, InkLatch, Inklach, MonitorInk, and Monitor Ink under Pictures.
+
+Use `POINTORY_DATA_DIR` for an isolated profile. `POINTORY_STT_PYTHON` selects a caption interpreter and `POINTORY_STT_WORKER` overrides the bundled worker. `ONPEN_DATA_DIR` and `MONITOR_INK_DATA_DIR` remain supported for profiles; the corresponding `ONPEN_STT_` and `LAYERPEN_STT_` names remain supported for captions. The Windows caption setup creates `%LOCALAPPDATA%/Pointory/stt-venv`; existing supported runtimes remain available through the native discovery fallback.
+
+OpenVINO model downloads default to `~/.cache/pointory`; complete legacy downloads under `~/.cache/onpen` or `~/.cache/layerpen` are reused in place. `POINTORY_MODEL_DIR` overrides that root, with `ONPEN_MODEL_DIR` and `LAYERPEN_MODEL_DIR` aliases. Compiled OpenVINO caches use `ov-compiled-cache` under the selected root. Set `POINTORY_STT_DIAGNOSTICS=1` only when investigating a worker hang; previous `ONPEN_`/`LAYERPEN_` diagnostic flags remain accepted.

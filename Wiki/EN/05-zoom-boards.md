@@ -1,8 +1,8 @@
 # Zoom, boards, and fading ink
 
-[OnPen](../../README.md) · [Guide index](README.md) · [KR](../KR/05-zoom-boards.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [KR](../KR/05-zoom-boards.md)
 
-![OnPen — Zoom, boards, and fading ink](../assets/en-board-zoom.jpg)
+![Pointory — Zoom, boards, and fading ink](../assets/en-board-zoom.jpg)
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 

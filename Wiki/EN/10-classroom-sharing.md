@@ -1,14 +1,14 @@
 # Classroom materials and live screen sharing
 
-[OnPen](../../README.md) · [Guide index](README.md) · [한국어](../KR/10-classroom-sharing.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [한국어](../KR/10-classroom-sharing.md)
 
-![Instructor sharing settings in OnPen](../assets/sharing-settings.jpg)
+![Instructor sharing settings in Pointory](../assets/sharing-settings.jpg)
 
 *Settings is the actual UI in browser preview. The student screenshot uses the real local HTTP server with an example file and a static sample frame. Neither screenshot proves native desktop capture or connectivity from another classroom device.*
 
 ## Publish materials as an instructor
 
-1. Open **Share materials** in OnPen settings.
+1. Open **Share materials** in Pointory settings.
 2. Click **Add files** and choose PDFs, slides, documents, or exported PNGs. Only selected files are listed; no directory is published. Up to 100 files are supported and duplicate paths are skipped.
 3. Check the detected IPv4 address belongs to the classroom Wi-Fi or Ethernet network. If it belongs to a VPN, enter the correct local IPv4 address.
 4. Click **Start sharing**. The app selects an available port and displays a URL and QR code.
@@ -36,9 +36,9 @@ The entire selected monitor is captured, including ink, toolbar, open windows, a
 
 ## Stop and troubleshoot
 
-- **Stop sharing** or quitting OnPen stops the server and live view. Closing only the panel keeps sharing on.
+- **Stop sharing** or quitting Pointory stops the server and live view. Closing only the panel keeps sharing on.
 - Restarting sharing rotates the random URL and may change the port. Send students the new address. The file list lasts only for the current app session.
-- Allow OnPen through the Windows firewall on the required private network. The app does not change firewall rules or configure router port forwarding.
+- Allow Pointory through the Windows firewall on the required private network. The app does not change firewall rules or configure router port forwarding.
 - Guest/school Wi-Fi client isolation, VLAN separation, VPNs, and the wrong IPv4 address can block access. Ask the network administrator whether device-to-device traffic is allowed.
 - Private/link-local IPv4 networks are the target. Internet hosting, IPv6, HTTPS, uploads, and account management are not included.
 - If live view stays unavailable, check the instructor panel's error, screen capture permissions, and selected monitor. Native macOS/Linux sharing, cross-device classroom connectivity, and classroom-scale load testing remain unverified.

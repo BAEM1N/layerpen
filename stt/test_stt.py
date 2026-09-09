@@ -1,11 +1,90 @@
 import unittest
 import asyncio
 import json
-from unittest.mock import patch
+import io
+import os
+import tempfile
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 import numpy as np
 from providers import Protocol
-from worker import Segmenter, Audio, STOP, cloud
-from acceleration import choose
+from worker import Segmenter, Audio, STOP, cloud, main
+from acceleration import choose, environment_value, openvino_recognizer
+
+
+class RuntimeMigrationTests(unittest.TestCase):
+    def test_model_directory_override_precedence_and_legacy_aliases(self):
+        cases = [
+            ({'POINTORY_MODEL_DIR': 'new', 'ONPEN_MODEL_DIR': 'old', 'LAYERPEN_MODEL_DIR': 'older'}, 'new'),
+            ({'ONPEN_MODEL_DIR': 'old', 'LAYERPEN_MODEL_DIR': 'older'}, 'old'),
+            ({'LAYERPEN_MODEL_DIR': 'older'}, 'older'),
+            ({'POINTORY_MODEL_DIR': '', 'ONPEN_MODEL_DIR': 'old'}, 'old'),
+            ({}, None),
+        ]
+        for values, expected in cases:
+            with self.subTest(values=values), patch.dict(os.environ, values, clear=True):
+                self.assertEqual(environment_value('MODEL_DIR'), expected)
+
+    def test_diagnostics_setting_uses_pointory_and_preserves_legacy_flags(self):
+        cases = [
+            ({'POINTORY_STT_DIAGNOSTICS': '1'}, True),
+            ({'POINTORY_STT_DIAGNOSTICS': '0', 'ONPEN_STT_DIAGNOSTICS': '1'}, False),
+            ({'ONPEN_STT_DIAGNOSTICS': '1'}, True),
+            ({'LAYERPEN_STT_DIAGNOSTICS': '1'}, True),
+        ]
+        for values, expected in cases:
+            with self.subTest(values=values), patch.dict(os.environ, values, clear=True), \
+                 patch('worker.sys.stdin', io.StringIO('{"command":"devices"}\n')), \
+                 patch('worker.devices', return_value=[]), patch('worker.emit'), \
+                 patch('faulthandler.dump_traceback_later') as diagnostics:
+                main()
+                self.assertEqual(diagnostics.called, expected)
+
+    def test_openvino_reuses_complete_legacy_models_without_download(self):
+        required = ['openvino_encoder_model.xml', 'openvino_encoder_model.bin',
+                    'openvino_decoder_model.xml', 'openvino_decoder_model.bin', 'generation_config.json']
+        for brand in ('onpen', 'layerpen'):
+            with self.subTest(brand=brand), tempfile.TemporaryDirectory() as temp:
+                home = Path(temp)
+                legacy = home / '.cache' / brand / 'ov-whisper-base'
+                legacy.mkdir(parents=True)
+                for name in required:
+                    (legacy / name).write_text('cached')
+                download, pipeline = Mock(), Mock()
+                with patch.dict(os.environ, {}, clear=True), patch('acceleration.Path.home', return_value=home), \
+                     patch.dict('sys.modules', {'openvino_genai': SimpleNamespace(WhisperPipeline=pipeline),
+                                               'huggingface_hub': SimpleNamespace(snapshot_download=download)}):
+                    openvino_recognizer({}, 'CPU')
+                download.assert_not_called()
+                pipeline.assert_called_once_with(str(legacy), 'CPU', CACHE_DIR=str(home / '.cache' / 'pointory' / 'ov-compiled-cache'))
+                self.assertTrue(all((legacy / name).is_file() for name in required))
+
+    def test_openvino_downloads_new_models_to_pointory_cache(self):
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            # A partial earlier download must not prevent a fresh, complete download.
+            partial = home / '.cache' / 'onpen' / 'ov-whisper-base'
+            partial.mkdir(parents=True)
+            (partial / 'generation_config.json').write_text('{}')
+            download, pipeline = Mock(), Mock()
+            with patch.dict(os.environ, {}, clear=True), patch('acceleration.Path.home', return_value=home), \
+                 patch.dict('sys.modules', {'openvino_genai': SimpleNamespace(WhisperPipeline=pipeline),
+                                           'huggingface_hub': SimpleNamespace(snapshot_download=download)}):
+                openvino_recognizer({}, 'CPU')
+            self.assertEqual(download.call_args.kwargs['local_dir'], str(home / '.cache' / 'pointory' / 'ov-whisper-base'))
+
+    def test_explicit_model_root_does_not_silently_use_legacy_models(self):
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            custom = home / 'custom'
+            download, pipeline = Mock(), Mock()
+            with patch.dict(os.environ, {'POINTORY_MODEL_DIR': str(custom)}, clear=True), \
+                 patch('acceleration.Path.home', side_effect=AssertionError('Explicit cache must not search default folders')), \
+                 patch.dict('sys.modules', {'openvino_genai': SimpleNamespace(WhisperPipeline=pipeline),
+                                           'huggingface_hub': SimpleNamespace(snapshot_download=download)}):
+                openvino_recognizer({}, 'CPU')
+            self.assertEqual(download.call_args.kwargs['local_dir'], str(custom / 'ov-whisper-base'))
 
 
 class AccelerationTests(unittest.TestCase):

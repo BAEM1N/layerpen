@@ -24,7 +24,7 @@ with ZipFile(dest, 'w', ZIP_DEFLATED) as archive:
             continue
         if path.suffix.lower() in {'.exe', '.zip', '.log', '.pyc'} and path.name != 'third-party-sources.zip':
             continue
-        archive.write(path, 'onpen/' + relative.as_posix())
+        archive.write(path, 'pointory/' + relative.as_posix())
 with ZipFile(dest) as archive:
     assert archive.testzip() is None
 print(dest)

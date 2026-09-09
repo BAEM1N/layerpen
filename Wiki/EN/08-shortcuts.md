@@ -1,8 +1,8 @@
 # Keyboard shortcuts
 
-[OnPen](../../README.md) · [Guide index](README.md) · [KR](../KR/08-shortcuts.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [KR](../KR/08-shortcuts.md)
 
-![OnPen — Keyboard shortcuts](../assets/en-shortcuts.jpg)
+![Pointory — Keyboard shortcuts](../assets/en-shortcuts.jpg)
 
 *Actual v0.1 UI in browser preview with sample data; not native runtime verification.*
 

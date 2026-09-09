@@ -1,8 +1,8 @@
 # 필기와 편집
 
-[OnPen](../../README.md) · [Guide index](README.md) · [EN](../EN/03-drawing.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [EN](../EN/03-drawing.md)
 
-![OnPen — 필기와 편집](../assets/kr-text-fonts.jpg)
+![Pointory — 필기와 편집](../assets/kr-text-fonts.jpg)
 
 *v0.1 실제 UI의 예제 데이터 기반 브라우저 미리보기이며 네이티브 실행 검증 화면은 아닙니다.*
 
@@ -12,7 +12,7 @@
 3. 드래그해서 그립니다. 직선·사각형·타원은 드래그 범위로 만듭니다.
 4. 마우스 모드로 바꾸면 필기를 유지한 채 아래 프로그램을 조작합니다.
 
-![예제 수업 위에 실제 렌더러로 그린 강조와 도형](../assets/onpen-overview.jpg)
+![예제 수업 위에 실제 렌더러로 그린 강조와 도형](../assets/pointory-overview.jpg)
 
 ## 수정
 **Ctrl+Z**는 실행 취소, **Ctrl+Shift+Z**는 다시 실행입니다. 지우개는 닿은 선 전체를 지우며 픽셀 단위 지우기가 아닙니다. 선택 도구로 필기를 고르고 드래그하면 이동하고 핸들로 크기를 바꿉니다. 완료한 텍스트도 이동·크기 변경할 수 있습니다.

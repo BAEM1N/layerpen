@@ -1,6 +1,6 @@
-# OnPen user guides
+# Pointory user guides
 
-[OnPen](../../README.md) · [KR / EN](../README.md)
+[Pointory](../../README.md) · [KR / EN](../README.md)
 
 Illustrated setup, usage steps, expected behavior, and limitations for each feature.
 
@@ -16,4 +16,4 @@ Illustrated setup, usage steps, expected behavior, and limitations for each feat
 - [Classroom materials and live screen sharing](10-classroom-sharing.md)
 - [Cursor spotlight and circular magnifier](11-spotlight.md)
 
-[Screenshot provenance](../assets/README.md) · [Report a bug](https://github.com/BAEM1N/layerpen/issues)
+[Screenshot provenance](../assets/README.md) · [Report a bug](https://github.com/BAEM1N/pointory/issues)

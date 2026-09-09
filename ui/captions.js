@@ -4,7 +4,7 @@ const native=window.__TAURI__;
 const overlay=new URLSearchParams(location.search).has('overlay');
 const defaults={whisper:'base',qwen:'Qwen/Qwen3-ASR-0.6B',openai:'gpt-live-transcribe',gemini:'gemini-3.5-transcribe-live',elevenlabs:'scribe_v2_realtime'};
 let devices=[],accelerators=[],active=false,clearTimer;
-let saved={};try{saved=JSON.parse(localStorage.getItem('onpen-caption-settings')||localStorage.getItem('layerpen-caption-settings')||'{}');}catch{}
+let saved={};try{saved=JSON.parse(localStorage.getItem('pointory-caption-settings')||localStorage.getItem('onpen-caption-settings')||localStorage.getItem('layerpen-caption-settings')||'{}');}catch{}
 const invoke=(name,args={})=>native.core.invoke(name,args);
 function state(running){active=running;$('config').disabled=running;$('start').disabled=running;$('stop').disabled=!running;}
 function receive(e){
@@ -47,7 +47,7 @@ function listAccelerators(){
   $('accelerator').value=[...$('accelerator').options].some(o=>o.value===old)?old:'auto';
 }
 function configValues(){return {provider:$('provider').value,model:$('model').value.trim(),accelerator:$('accelerator').value,language:$('language').value,source:$('source').value,device:$('device').value,threshold:Number($('threshold').value)};}
-function saveSettings(){try{saved=configValues();localStorage.setItem('onpen-caption-settings',JSON.stringify(saved));$('savedSettings').textContent=' 저장됨 · API 키는 저장하지 않습니다.';}catch{$('savedSettings').textContent=' 설정을 저장하지 못했습니다.';}}
+function saveSettings(){try{saved=configValues();localStorage.setItem('pointory-caption-settings',JSON.stringify(saved));$('savedSettings').textContent=' 저장됨 · API 키는 저장하지 않습니다.';}catch{$('savedSettings').textContent=' 설정을 저장하지 못했습니다.';}}
 function providerChanged(){
   const p=$('provider').value,local=['whisper','qwen'].includes(p);
   $('model').value=defaults[p];$('keyRow').hidden=local;$('key').value='';$('sensitivity').hidden=!local;

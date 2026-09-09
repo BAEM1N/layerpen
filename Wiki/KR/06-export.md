@@ -1,8 +1,8 @@
 # PNG·GIF 저장
 
-[OnPen](../../README.md) · [Guide index](README.md) · [EN](../EN/06-export.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [EN](../EN/06-export.md)
 
-![OnPen — PNG·GIF 저장](../assets/kr-export.jpg)
+![Pointory — PNG·GIF 저장](../assets/kr-export.jpg)
 
 *v0.1 실제 UI의 예제 데이터 기반 브라우저 미리보기이며 네이티브 실행 검증 화면은 아닙니다.*
 
@@ -12,7 +12,7 @@
 3. 카메라 버튼 또는 **Ctrl+Shift+S**를 누릅니다.
 4. 파일을 열어 선택한 모니터와 내용이 맞는지 확인합니다.
 
-기본 폴더는 Pictures/OnPen입니다. 이전 제품명의 기본 경로는 설정에서 전환하지만 기존 파일을 이동하지 않습니다. 직접 지정한 폴더는 유지합니다. 네이티브 캡처에서는 툴바를 제외합니다.
+기본 폴더는 Pictures/Pointory입니다. 이전 제품명의 기본 경로는 설정에서 전환하지만 기존 파일을 이동하지 않습니다. 직접 지정한 폴더는 유지합니다. 네이티브 캡처에서는 툴바를 제외합니다.
 
 ## 필기 GIF 내보내기
 1. 필요하면 전체 지우기로 이전 필기와 기록을 초기화합니다.

@@ -1,15 +1,15 @@
 # 설치와 첫 실행
 
-[OnPen](../../README.md) · [Guide index](README.md) · [EN](../EN/01-quick-start.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [EN](../EN/01-quick-start.md)
 
-![OnPen — 설치와 첫 실행](../assets/kr-overview.jpg)
+![Pointory — 설치와 첫 실행](../assets/kr-overview.jpg)
 
 *v0.1 실제 UI의 예제 데이터 기반 브라우저 미리보기이며 네이티브 실행 검증 화면은 아닙니다.*
 
 ## 설치와 실행
-1. [릴리스](https://github.com/BAEM1N/layerpen/releases/latest)에서 Windows x64 설치 EXE 또는 포터블 ZIP을 받습니다.
-2. 설치하거나 ZIP을 모두 풀고 `OnPen.exe`를 실행합니다. 동봉된 안내와 STT 파일은 함께 보관합니다.
-3. 이전 OnPen을 먼저 종료합니다. Windows에서는 WebView2가 필요하며 설치본에서 받을 수 있습니다.
+1. [릴리스](https://github.com/BAEM1N/pointory/releases/latest)에서 Windows x64 설치 EXE 또는 포터블 ZIP을 받습니다.
+2. 설치하거나 ZIP을 모두 풀고 `Pointory.exe`를 실행합니다. 동봉된 안내와 STT 파일은 함께 보관합니다.
+3. 이전 Pointory를 먼저 종료합니다. Windows에서는 WebView2가 필요하며 설치본에서 받을 수 있습니다.
 4. 톱니바퀴 **설정** 버튼에서 필기할 모니터를 선택합니다.
 
 ## 첫 필기

@@ -1,13 +1,13 @@
 # 실시간 자막 (실험적)
 
-[OnPen](../../README.md) · [Guide index](README.md) · [EN](../EN/07-live-captions.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [EN](../EN/07-live-captions.md)
 
-![OnPen — 실시간 자막 (실험적)](../assets/captions-local.jpg)
+![Pointory — 실시간 자막 (실험적)](../assets/captions-local.jpg)
 
 *v0.1 실제 UI의 예제 데이터 기반 브라우저 미리보기이며 네이티브 실행 검증 화면은 아닙니다.*
 
 ## 로컬 자막 준비
-일반 필기는 Python 없이 작동합니다. 자막은 [STT 설정](../../docs/STT-SETUP.md)에 따라 워커 의존성을 설치합니다. Windows 설정 스크립트는 별도 OnPen Python 환경을 만들며 모델은 최초 내려받기가 필요할 수 있습니다.
+일반 필기는 Python 없이 작동합니다. 자막은 [STT 설정](../../docs/STT-SETUP.md)에 따라 워커 의존성을 설치합니다. Windows 설정 스크립트는 별도 Pointory Python 환경을 만들며 모델은 최초 내려받기가 필요할 수 있습니다.
 
 1. 툴바 **CC** 또는 설정의 실시간 자막을 엽니다.
 2. Local Whisper와 모델을 선택합니다. 작은 지원 모델부터 시작하세요.

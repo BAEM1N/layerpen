@@ -1,8 +1,8 @@
 # 문제 해결과 제한 사항
 
-[OnPen](../../README.md) · [Guide index](README.md) · [EN](../EN/09-troubleshooting.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [EN](../EN/09-troubleshooting.md)
 
-![OnPen — 문제 해결과 제한 사항](../assets/kr-overview.jpg)
+![Pointory — 문제 해결과 제한 사항](../assets/kr-overview.jpg)
 
 *v0.1 실제 UI의 예제 데이터 기반 브라우저 미리보기이며 네이티브 실행 검증 화면은 아닙니다.*
 
@@ -19,8 +19,8 @@
 저장은 폴더 쓰기 권한과 디스크 공간을 확인합니다. 자막은 Python 환경·장치·권한·모델 다운로드·백엔드를 확인합니다. API 키와 호환 모델은 제공자 계정 설정에 따릅니다. [자막 안내](07-live-captions.md)를 참고하세요.
 
 ## 이전 이름
-제품명은 OnPen입니다. 저장소 URL과 앱 식별자는 링크·업그레이드 호환을 위해 유지합니다. 이전 기본 캡처 경로는 설정에서 전환하고 파일은 옮기지 않습니다. 직접 정한 경로는 유지합니다. 필기와 재생 기록은 재시작 시 복원하지 않습니다.
+제품명은 Pointory(포인토리), 저장소는 `BAEM1N/pointory`입니다. 내부 앱 식별자는 업그레이드 호환을 위해 유지하며 이전 OnPen 설정과 가져온 글꼴을 처음 실행할 때 이어받습니다. 이전 기본 캡처 경로는 설정에서 전환하고 파일은 옮기지 않습니다. 직접 정한 경로는 유지합니다. 필기와 재생 기록은 재시작 시 복원하지 않습니다.
 
 ## 버그 제보
-[Issues](https://github.com/BAEM1N/layerpen/issues/new?template=bug_report.md)에 버전·OS·모니터 배치/배율·재현 순서·기대/실제 결과·개인정보를 가린 캡처를 남깁니다. API 키나 비공개 문서는 제외합니다. Windows가 배포 대상이며 macOS/Linux 네이티브 테스트와 클라우드 키 검증에는 제한이 있습니다.
+[Issues](https://github.com/BAEM1N/pointory/issues/new?template=bug_report.md)에 버전·OS·모니터 배치/배율·재현 순서·기대/실제 결과·개인정보를 가린 캡처를 남깁니다. API 키나 비공개 문서는 제외합니다. Windows가 배포 대상이며 macOS/Linux 네이티브 테스트와 클라우드 키 검증에는 제한이 있습니다.
 

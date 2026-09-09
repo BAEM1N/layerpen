@@ -4,6 +4,25 @@ from pathlib import Path
 from providers import SttError
 
 
+def environment_value(name):
+    """Prefer Pointory settings while preserving earlier installation overrides."""
+    return next((value for brand in ('POINTORY', 'ONPEN', 'LAYERPEN')
+                 if (value := os.environ.get(brand + '_' + name))), None)
+
+
+def openvino_model_location(model, required):
+    override = environment_value('MODEL_DIR')
+    root = Path(override) if override else Path.home() / '.cache' / 'pointory'
+    location = root / ('ov-whisper-' + model)
+    if not override and not all((location / name).is_file() for name in required):
+        # Reuse existing weights in place; upgrades must not redownload large models.
+        for brand in ('onpen', 'layerpen'):
+            legacy = Path.home() / '.cache' / brand / ('ov-whisper-' + model)
+            if all((legacy / name).is_file() for name in required):
+                return root, legacy
+    return root, location
+
+
 def hardware():
     result = [{'id': 'cpu', 'name': 'CPU', 'providers': ['whisper', 'qwen']}]
     try:
@@ -44,13 +63,14 @@ def openvino_recognizer(config, device):
     import openvino_genai as genai
     from huggingface_hub import snapshot_download
     model = config.get('model') or 'base'
-    root = Path(os.environ.get('ONPEN_MODEL_DIR', os.environ.get('LAYERPEN_MODEL_DIR', Path.home() / '.cache' / 'onpen')))
+    root = Path(environment_value('MODEL_DIR') or Path.home() / '.cache' / 'pointory')
     if Path(model).is_dir():
         location = model
     elif model in ('tiny', 'base', 'small'):
-        location = str(root / ('ov-whisper-' + model))
         required = ['openvino_encoder_model.xml', 'openvino_encoder_model.bin',
                     'openvino_decoder_model.xml', 'openvino_decoder_model.bin', 'generation_config.json']
+        root, model_location = openvino_model_location(model, required)
+        location = str(model_location)
         if not all((Path(location) / name).is_file() for name in required):
             snapshot_download('OpenVINO/whisper-' + model + '-fp16-ov', local_dir=location,
                               allow_patterns=['*.json', '*.xml', '*.bin', '*.txt'])

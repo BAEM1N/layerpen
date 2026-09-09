@@ -1,12 +1,12 @@
-# OnPen
+# Pointory
 
 画面共有・デモ・授業向けの無料オープンソース描画オーバーレイです。選択したモニターに書き込み、描画を残したまま元のアプリを操作できます。
 
-[Windows版をダウンロード](https://github.com/BAEM1N/layerpen/releases) · [English](../README.md) · [한국어](USER-GUIDE.ko.md) · [简体中文](README.zh-CN.md)
+[Windows版をダウンロード](https://github.com/BAEM1N/pointory/releases) · [English](../README.md) · [한국어](USER-GUIDE.ko.md) · [简体中文](README.zh-CN.md)
 
 ## 起動
 
-Windows x64のインストーラーを実行するか、ポータブルZIPを展開して `OnPen.exe` を起動してください。ビルドは不要です。Microsoft WebView2が必要です。初回公開版は0.1.0で、実行ファイルは未署名です。
+Windows x64のインストーラーを実行するか、ポータブルZIPを展開して `Pointory.exe` を起動してください。ビルドは不要です。Microsoft WebView2が必要です。初回公開版は0.1.0で、実行ファイルは未署名です。
 
 設定 → 言語で日本語を選べます。標準ではシステムの言語を使います。日本語・英語・韓国語・簡体字中国語に対応し、変更は全ウィンドウに反映され、次回起動時も保持されます。
 

@@ -1,8 +1,8 @@
 [package]
-name = "onpen"
+name = "pointory"
 version = "0.1.0"
 edition = "2021"
-description = "OnPen: screen annotation for meetings, demos, and teaching"
+description = "Pointory: screen annotation for meetings, demos, and teaching"
 license = "MIT"
 
 [build-dependencies]

@@ -19,7 +19,7 @@ fn allowed(ip:Ipv4Addr)->bool {ip.is_private()||ip.is_link_local()||ip.is_loopba
 fn escape(s:&str)->String {s.replace('&',"&amp;").replace('<',"&lt;").replace('>',"&gt;").replace('"',"&quot;").replace('\'',"&#39;")}
 fn page(files:&BTreeMap<String,Item>)->String {
  let rows=files.values().map(|f|format!("<li><a href=\"file/{}\">{}</a><small>{:.1} MB</small></li>",f.id,escape(&f.name),f.size as f64/1_048_576.)).collect::<String>();
- format!("<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>OnPen · Class materials</title><style>body{{font:17px system-ui;background:#edf3fa;color:#152840;max-width:720px;margin:8vh auto;padding:24px}}h1{{color:#2368cc}}li{{background:white;padding:20px;margin:12px 0;border-radius:14px;overflow-wrap:anywhere}}ul{{padding:0;list-style:none}}a{{color:#1759b5}}small{{display:block;margin-top:8px;color:#526278}}</style><h1>OnPen</h1><h2>Class materials · 수업 자료</h2><p>Choose a file to download. 파일을 선택해 내려받으세요.</p><ul>{rows}</ul><p>{}</p><p><a href=\"./\">Refresh · 새로고침</a></p><footer>Shared by this PC while OnPen sharing is on.<br>강사 PC에서 공유를 켠 동안 이용할 수 있습니다.</footer></html>",if files.is_empty(){"No materials yet. 아직 공유된 자료가 없습니다."}else{""})
+ format!("<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Pointory · Class materials</title><style>body{{font:17px system-ui;background:#edf3fa;color:#152840;max-width:720px;margin:8vh auto;padding:24px}}h1{{color:#2368cc}}li{{background:white;padding:20px;margin:12px 0;border-radius:14px;overflow-wrap:anywhere}}ul{{padding:0;list-style:none}}a{{color:#1759b5}}small{{display:block;margin-top:8px;color:#526278}}</style><h1>Pointory</h1><h2>Class materials · 수업 자료</h2><p>Choose a file to download. 파일을 선택해 내려받으세요.</p><ul>{rows}</ul><p>{}</p><p><a href=\"./\">Refresh · 새로고침</a></p><footer>Shared by this PC while Pointory sharing is on.<br>강사 PC에서 공유를 켠 동안 이용할 수 있습니다.</footer></html>",if files.is_empty(){"No materials yet. 아직 공유된 자료가 없습니다."}else{""})
 }
 struct Connection(TcpStream);
 impl Read for Connection { fn read(&mut self,buf:&mut [u8])->std::io::Result<usize>{let start=std::time::Instant::now();loop{match self.0.read(buf){Err(e) if e.kind()==std::io::ErrorKind::WouldBlock&&start.elapsed()<Duration::from_secs(2)=>std::thread::sleep(Duration::from_millis(5)),result=>return result}}} }
@@ -91,7 +91,7 @@ pub async fn share_add(app:tauri::AppHandle)->Result<()> {
 #[tauri::command]
 pub fn share_remove(id:String,state:tauri::State<ShareState>)->Result<()> {state.files.lock().map_err(|e|e.to_string())?.remove(&id);Ok(())}
 #[tauri::command]
-pub async fn share_open(app:tauri::AppHandle)->Result<()> {if let Some(w)=app.get_webview_window("sharing"){w.show().map_err(|e|e.to_string())?;w.set_focus().map_err(|e|e.to_string())?;}else{WebviewWindowBuilder::new(&app,"sharing",WebviewUrl::App("sharing.html".into())).title("OnPen · 자료 공유 / Share materials").inner_size(540.,740.).build().map_err(|e|e.to_string())?;}Ok(())}
+pub async fn share_open(app:tauri::AppHandle)->Result<()> {if let Some(w)=app.get_webview_window("sharing"){w.show().map_err(|e|e.to_string())?;w.set_focus().map_err(|e|e.to_string())?;}else{WebviewWindowBuilder::new(&app,"sharing",WebviewUrl::App("sharing.html".into())).title("Pointory · 자료 공유 / Share materials").inner_size(540.,740.).build().map_err(|e|e.to_string())?;}Ok(())}
 
 #[tauri::command]
 pub fn share_live(app:tauri::AppHandle,enabled:bool)->Result<()> {
@@ -125,9 +125,9 @@ pub fn share_live(app:tauri::AppHandle,enabled:bool)->Result<()> {
  #[test] fn live_frame_is_revoked_when_stopped(){let live=Arc::new(Live::default());live.enabled.store(true,Ordering::SeqCst);*live.frame.lock().unwrap()=b"test-frame".to_vec();let server=start(Ipv4Addr::LOCALHOST,0,Arc::new(Mutex::new(BTreeMap::new())),live.clone()).unwrap();let url=server.url.clone()+"live.jpg";assert!(get(&url,None,None).contains("test-frame"));live.stop();assert!(get(&url,None,None).starts_with("HTTP/1.1 404"));}
  #[test] #[ignore = "Manual browser fixture; no desktop capture"]
  fn browser_fixture(){
-  let live=Arc::new(Live::default());let image=xcap::image::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../Wiki/assets/onpen-overview.jpg")).unwrap().to_rgb8();
+  let live=Arc::new(Live::default());let image=xcap::image::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../Wiki/assets/pointory-overview.jpg")).unwrap().to_rgb8();
   let mut bytes=vec![];xcap::image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes,70).encode_image(&image).unwrap();*live.frame.lock().unwrap()=bytes;live.enabled.store(true,Ordering::SeqCst);
-  let files=Arc::new(Mutex::new(BTreeMap::new()));let path=std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../README.md");files.lock().unwrap().insert("sample".into(),Item{id:"sample".into(),name:"OnPen-example-readme.md".into(),size:path.metadata().unwrap().len(),path});
+  let files=Arc::new(Mutex::new(BTreeMap::new()));let path=std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../README.md");files.lock().unwrap().insert("sample".into(),Item{id:"sample".into(),name:"Pointory-example-readme.md".into(),size:path.metadata().unwrap().len(),path});
   let server=start(Ipv4Addr::LOCALHOST,0,files,live).unwrap();println!("BROWSER_FIXTURE_URL={}",server.url);std::thread::sleep(Duration::from_secs(300));
  }
 }

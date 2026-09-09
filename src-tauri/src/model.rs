@@ -485,11 +485,11 @@ impl Default for Preferences {
 impl Preferences {
     pub fn migrate_capture_dir(&mut self, pictures: &std::path::Path, profile: Option<&std::path::Path>) {
         if self.capture_dir.is_empty() {
-            let root = profile.map(|p| p.join("captures")).unwrap_or_else(|| pictures.join("OnPen"));
+            let root = profile.map(|p| p.join("captures")).unwrap_or_else(|| pictures.join("Pointory"));
             self.capture_dir = root.to_string_lossy().into_owned();
             return;
         }
-        let same = ["LayerPen","InkLatch","Inklach","MonitorInk","Monitor Ink"].iter().any(|name| {
+        let same = ["OnPen","LayerPen","InkLatch","Inklach","MonitorInk","Monitor Ink"].iter().any(|name| {
             let old=pictures.join(name);
             let same=std::path::Path::new(&self.capture_dir)==old;
             #[cfg(target_os="windows")]
@@ -497,7 +497,7 @@ impl Preferences {
             same
         });
         if same {
-            self.capture_dir = pictures.join("OnPen").to_string_lossy().into_owned();
+            self.capture_dir = pictures.join("Pointory").to_string_lossy().into_owned();
         }
     }
     pub fn valid(&self) -> bool {
@@ -702,13 +702,13 @@ mod tests {
         let pictures = std::path::Path::new("/users/example/Pictures");
         let mut p = super::Preferences::default();
         p.migrate_capture_dir(pictures, None);
-        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("OnPen"));
+        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("Pointory"));
         p.capture_dir = pictures.join("MonitorInk").to_string_lossy().into_owned();
         p.migrate_capture_dir(pictures, None);
-        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("OnPen"));
-        for old in ["LayerPen","InkLatch","Inklach","Monitor Ink"] {
+        assert_eq!(std::path::Path::new(&p.capture_dir), pictures.join("Pointory"));
+        for old in ["OnPen","LayerPen","InkLatch","Inklach","Monitor Ink"] {
             p.capture_dir=pictures.join(old).to_string_lossy().into_owned();p.migrate_capture_dir(pictures,None);
-            assert_eq!(std::path::Path::new(&p.capture_dir),pictures.join("OnPen"));
+            assert_eq!(std::path::Path::new(&p.capture_dir),pictures.join("Pointory"));
         }
         p.capture_dir = pictures.join("Meetings").to_string_lossy().into_owned();
         let custom = p.capture_dir.clone();

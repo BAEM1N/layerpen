@@ -1,8 +1,8 @@
 # 키보드 단축키
 
-[OnPen](../../README.md) · [Guide index](README.md) · [EN](../EN/08-shortcuts.md)
+[Pointory](../../README.md) · [Guide index](README.md) · [EN](../EN/08-shortcuts.md)
 
-![OnPen — 키보드 단축키](../assets/kr-shortcuts.jpg)
+![Pointory — 키보드 단축키](../assets/kr-shortcuts.jpg)
 
 *v0.1 실제 UI의 예제 데이터 기반 브라우저 미리보기이며 네이티브 실행 검증 화면은 아닙니다.*
 

@@ -9,10 +9,13 @@ pub struct CaptionState {
 
 fn worker(app: &tauri::AppHandle) -> Result<Command,String> {
     let local=app.path().local_data_dir().map_err(|e|e.to_string())?;
-    let venv=local.join("OnPen").join("stt-venv").join(if cfg!(windows){"Scripts/python.exe"}else{"bin/python"});
-    let python = std::env::var_os("ONPEN_STT_PYTHON").or_else(||std::env::var_os("LAYERPEN_STT_PYTHON")).unwrap_or_else(|| if venv.is_file(){venv.into_os_string()}else{if cfg!(windows){"python".into()}else{"python3".into()}});
+    let venv=["Pointory", "OnPen", "LayerPen", "MonitorInk"].iter()
+        .map(|name| local.join(name).join("stt-venv").join(if cfg!(windows){"Scripts/python.exe"}else{"bin/python"}))
+        .find(|path| path.is_file());
+    let python = std::env::var_os("POINTORY_STT_PYTHON").or_else(||std::env::var_os("ONPEN_STT_PYTHON")).or_else(||std::env::var_os("LAYERPEN_STT_PYTHON"))
+        .unwrap_or_else(|| venv.map(|path| path.into_os_string()).unwrap_or_else(|| if cfg!(windows){"python".into()}else{"python3".into()}));
     let resource=app.path().resource_dir().map_err(|e|e.to_string())?.join("stt/worker.py");
-    let script = std::env::var_os("ONPEN_STT_WORKER").or_else(||std::env::var_os("LAYERPEN_STT_WORKER")).map(std::path::PathBuf::from)
+    let script = std::env::var_os("POINTORY_STT_WORKER").or_else(||std::env::var_os("ONPEN_STT_WORKER")).or_else(||std::env::var_os("LAYERPEN_STT_WORKER")).map(std::path::PathBuf::from)
         .unwrap_or_else(|| if resource.is_file(){resource}else{std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../stt/worker.py")});
     let mut cmd = Command::new(python);
     cmd.arg("-u").arg(script).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
@@ -60,7 +63,7 @@ pub async fn caption_open(app: tauri::AppHandle) -> Result<(), String> {
     }
     WebviewWindowBuilder::new(&app,"caption-settings",WebviewUrl::App("captions.html".into()))
         .data_directory(super::webview_data(&app)?)
-        .title("OnPen · Live captions (local preview)").inner_size(660.,740.)
+        .title("Pointory · Live captions (local preview)").inner_size(660.,740.)
         .build().map_err(|e|e.to_string())?;
     Ok(())
 }
@@ -108,7 +111,7 @@ pub async fn caption_start(app: tauri::AppHandle, config: serde_json::Value) -> 
     let w = if let Some(w) = app.get_webview_window("captions") { w } else {
         let w=WebviewWindowBuilder::new(&app,"captions",WebviewUrl::App("captions.html?overlay=1".into()))
             .data_directory(super::webview_data(&app)?)
-            .title("OnPen · Captions").inner_size(960.,150.).decorations(false)
+            .title("Pointory · Captions").inner_size(960.,150.).decorations(false)
             .transparent(true).shadow(false).always_on_top(true).skip_taskbar(true)
             .focused(false).visible(false).build().map_err(|e|e.to_string())?;
         w.set_ignore_cursor_events(true).map_err(|e|e.to_string())?;
