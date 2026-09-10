@@ -1,5 +1,7 @@
 # Pointory(포인토리) v0.2 Mac 검증과 인계
 
+**2026-09-11 업데이트:** 최신 아이콘·모델 준비 코드를 반영한 Mac 앱·DMG를 빌드했습니다. 실제 음성 엔진 설치, Whisper tiny 다운로드, 오프라인 CPU 파일 인식과 Python 3.9 환경 복구를 확인했습니다. Mac이 로그인 화면 상태라 최신 GUI·실제 마이크 확인은 현장에 남아 있습니다. [최신 검증 기록](validation/0.2-macos-models.ko.md).
+
 배포 명의·비용·직접 배포와 스토어 차이는 [서명 조사](SIGNING.ko.md)를 참고하세요.
 
 현재 제품명은 **Pointory(포인토리)**이며 저장소는 [BAEM1N/pointory](https://github.com/BAEM1N/pointory)입니다. 처음 받을 때는 `git clone https://github.com/BAEM1N/pointory.git` 후 `cd pointory`로 이동합니다. Rust 패키지/바이너리는 `pointory`, 내부 앱 식별자는 업그레이드 호환을 위해 `dev.personal.monitorink`를 유지합니다. 기본 저장 폴더는 Pictures/Pointory이며 `POINTORY_DATA_DIR`를 우선 사용합니다. 이전 환경변수와 설정은 호환됩니다.

@@ -6,8 +6,9 @@
 - Keep preparation active when the settings window closes; stop owned preparation processes when the app quits.
 - Require prepared local models before starting audio, and use local files for inference. Cloud captions expose runtime setup without a local model download.
 - Update English/Korean caption guides with setup screenshots.
+- Discover compatible Python installations from macOS GUI environments, repair stale managed speech environments, and prevent bytecode writes inside signed app resources.
 
-Windows validation includes the native model lifecycle fixture, toolbar/settings restart checks, a real Whisper tiny download (78 MB), and offline transcription of a prerecorded test WAV. Live API, microphone accuracy, new Mac/Linux behavior, and GPU/NPU inference were not validated in this change. These changes are on `main`; the published v0.1.0 assets have not been replaced.
+Windows validation includes the native model lifecycle fixture, toolbar/settings restart checks, a real Whisper tiny download (78 MB), and offline transcription of a prerecorded test WAV. M4 Mac checks also passed runtime installation/repair, fresh model download, packaged offline CPU inference, and app/DMG builds. Latest Mac GUI interaction, live API, microphone accuracy, Linux runtime behavior, and GPU/NPU inference remain unverified. These changes are on `main`; the published v0.1.0 assets have not been replaced. [Mac validation](validation/0.2-macos-models.ko.md).
 
 ---
 

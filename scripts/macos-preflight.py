@@ -25,10 +25,10 @@ import tempfile
 
 
 RESOURCES = (
-    "GETTING-STARTED.md", "INSTALL.ko.md", "LICENSE", "LICENSE.tauri",
+    "GETTING-STARTED.md", "INSTALL.ko.md", "LICENSE", "LICENSE.tauri", "LICENSE.lucide",
     "THIRD-PARTY-NOTICES.txt", "USER-GUIDE.ko.md", "third-party-sources.zip",
     "README.ja.md", "README.zh-CN.md", "STT-SETUP.md", "stt/worker.py",
-    "stt/providers.py", "stt/acceleration.py", "stt/requirements.txt",
+    "stt/providers.py", "stt/acceleration.py", "stt/model_manager.py", "stt/runtime_setup.py", "stt/requirements.txt",
     "stt/setup-windows.ps1",
 )
 VALIDATION_MARKERS = (

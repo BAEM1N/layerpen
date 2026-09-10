@@ -64,6 +64,8 @@ Epic Pen이나 ZoomIt 같은 화면 필기 도구의 오픈소스 대안을 찾�
 
 ## 개발과 참여
 
+2026-09-11에는 M4 Mac에서 최신 음성 엔진 설치·구버전 복구, Whisper tiny 다운로드, 앱 번들의 오프라인 CPU 음성 인식을 확인했습니다. 최신 툴바·설정의 실제 조작과 마이크 입력은 Mac 로그인 후 확인해야 합니다. [최신 Mac 검증](docs/validation/0.2-macos-models.ko.md).
+
 빌드 명령은 [English README](README.md#build-from-source), 작업 안내는 [CONTRIBUTING.md](CONTRIBUTING.md)를 참고하세요. 재현 가능한 버그, 키보드·접근성 개선, 번역, 다중 모니터 및 Mac 실제 검증을 환영합니다.
 
 v0.2 준비로 M4 Mac의 이전 개발 빌드에서 네이티브 UI·내보내기 시나리오 9개를 검증했습니다. 새 설정 글꼴·크기는 브라우저 검증을 마쳤고 최신 arm64 앱·DMG의 빌드·ad hoc 서명·무결성 검사도 통과했습니다. 최신 앱의 Mac 설치·재실행은 미검증입니다. 전체 화면 캡처, 실제 마이크, Retina·다중 모니터와 Apple GPU/ANE도 미검증이며 Mac 스포트라이트는 확대 없이 밝기 강조만 제공합니다. [Mac 검증 기록](docs/validation/0.2-macos.ko.md) · [후속 준비 사항](docs/HANDOFF-MACBOOK.ko.md).

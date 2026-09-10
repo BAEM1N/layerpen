@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import uuid
 
 ENGINES = {
     'faster-whisper': [],
@@ -27,6 +28,39 @@ def run_step(args, phase):
         raise RuntimeError(phase)
 
 
+def interpreter_version(python):
+    """Probe only the interpreter, without user packages or network access."""
+    options = {'stdin': subprocess.DEVNULL, 'stdout': subprocess.PIPE,
+               'stderr': subprocess.DEVNULL, 'text': True, 'timeout': 2}
+    if os.name == 'nt':
+        options['creationflags'] = subprocess.CREATE_NO_WINDOW
+    try:
+        result = subprocess.run([str(python), '-I', '-S', '-B', '-c',
+            "import sys; print('%d.%d' % sys.version_info[:2])"], **options)
+        parts = result.stdout.strip().split('.')
+        if result.returncode == 0 and len(parts) == 2 and all(part.isdecimal() for part in parts):
+            return tuple(int(part) for part in parts)
+    except (OSError, subprocess.SubprocessError, UnicodeError):
+        pass
+    return None
+
+
+def repair_posix_launchers(target, base):
+    """venv --upgrade keeps old aliases; replace only the managed Python launchers."""
+    directory = target / 'bin'
+    if directory.resolve() != directory:
+        raise ValueError('invalid_runtime_path')
+    directory.mkdir(parents=True, exist_ok=True)
+    for name in dict.fromkeys(('python', 'python3', base.name)):
+        temporary = directory / ('.pointory-python-' + uuid.uuid4().hex)
+        try:
+            temporary.symlink_to(base)
+            temporary.replace(directory / name)
+        finally:
+            if temporary.is_symlink():
+                temporary.unlink()
+
+
 def setup(config):
     engine = config.get('engine')
     if engine not in ENGINES:
@@ -38,9 +72,20 @@ def setup(config):
     if not target.is_absolute() or target.name != 'stt-venv' or target.parent.name != 'Pointory':
         raise ValueError('invalid_runtime_path')
     target = target.resolve()
+    if target.name != 'stt-venv' or target.parent.name != 'Pointory':
+        raise ValueError('invalid_runtime_path')
     python = target / ('Scripts/python.exe' if os.name == 'nt' else 'bin/python')
-    if not python.is_file() or not (target / 'pyvenv.cfg').is_file():
-        run_step([sys.executable, '-m', 'venv', str(target)], 'runtime_create')
+    version = interpreter_version(python) if python.is_file() else None
+    complete = (target / 'pyvenv.cfg').is_file() and version is not None and version >= (3, 10)
+    if not complete:
+        existing = target.exists()
+        base = Path(getattr(sys, '_base_executable', sys.executable)).resolve()
+        if existing and os.name != 'nt':
+            repair_posix_launchers(target, base)
+        run_step([str(base), '-m', 'venv', *(['--upgrade'] if existing else []), str(target)], 'runtime_create')
+        repaired = interpreter_version(python)
+        if repaired is None or repaired < (3, 10):
+            raise RuntimeError('runtime_create')
     # Cancellation can leave an interpreter and pyvenv.cfg before pip is ready.
     run_step([str(python), '-m', 'ensurepip', '--upgrade'], 'runtime_bootstrap')
     requirements = Path(__file__).with_name('requirements.txt')

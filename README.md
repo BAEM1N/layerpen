@@ -92,6 +92,8 @@ Yes: start **Share materials** on the instructor PC, select files, and show stud
 
 ### Is macOS ready?
 
+The latest M4 checks passed speech-runtime installation and repair, a fresh Whisper tiny download, and offline CPU transcription through the packaged worker. The app and development DMG also build and pass bundle checks. Latest GUI interaction and real microphone input still need a logged-in Mac session. [September 11 validation](docs/validation/0.2-macos-models.ko.md).
+
 An earlier development build passed nine native UI/export checks on an M4 Mac mini. The new settings-font controls passed browser checks; a native rerun of the latest changes is still pending. Full-screen capture, real microphone input, Retina/multiple displays, and Apple GPU/Neural Engine acceleration remain incomplete; Mac spotlight currently dims without magnification. The latest arm64 `.app` and DMG passed build, ad hoc signing, and integrity checks. Installation and launch of that DMG remain unverified, and no DMG is published yet. [Validation record](docs/validation/0.2-macos.ko.md) · [Remaining Mac work](docs/HANDOFF-MACBOOK.ko.md).
 
 ### What happened to OnPen and LayerPen?

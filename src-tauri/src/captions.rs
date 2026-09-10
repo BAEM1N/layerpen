@@ -13,6 +13,8 @@ pub struct CaptionState {
     // process lifecycle changes, so starting captions and downloading cannot race.
     process_gate: Mutex<()>,
     shutting_down: AtomicBool,
+    #[cfg(target_os="macos")]
+    python_cache: Mutex<Option<MacPythonCache>>,
 }
 
 #[derive(Default)]
@@ -25,13 +27,128 @@ fn python_override(mut read: impl FnMut(&str) -> Option<std::ffi::OsString>) -> 
     ["POINTORY_STT_PYTHON", "ONPEN_STT_PYTHON", "LAYERPEN_STT_PYTHON"].iter().find_map(|name|read(name))
 }
 
+#[cfg(any(target_os="macos", test))]
+fn macos_python_candidates(venvs: &[PathBuf], path: Option<&std::ffi::OsStr>) -> Vec<PathBuf> {
+    // Managed and migrated installations keep precedence only when their Python
+    // is compatible. They share discovery's cache and bounded version probes.
+    let mut candidates = venvs.to_vec();
+    if let Some(path) = path {
+        // Bound unusual PATHs while retaining normal shell search order.
+        for directory in std::env::split_paths(path).take(32) {
+            let candidate = directory.join("python3");
+            if !candidates.contains(&candidate) { candidates.push(candidate); }
+        }
+    }
+    for candidate in ["/opt/homebrew/bin/python3", "/usr/local/bin/python3",
+        "/Library/Frameworks/Python.framework/Versions/Current/bin/python3"] {
+        let candidate = PathBuf::from(candidate);
+        if !candidates.contains(&candidate) { candidates.push(candidate); }
+    }
+    candidates
+}
+
+#[cfg(any(target_os="macos", test))]
+fn python_version(text: &str) -> Option<(u32, u32)> {
+    let (major, minor) = text.trim().split_once('.')?;
+    Some((major.parse().ok()?, minor.parse().ok()?))
+}
+
+#[cfg(any(target_os="macos", test))]
+fn compatible_python(candidates: &[PathBuf], mut probe: impl FnMut(&std::path::Path) -> Option<(u32,u32)>) -> Option<PathBuf> {
+    candidates.iter().find(|path|probe(path).is_some_and(|version|version >= (3,10))).cloned()
+}
+
+#[cfg(target_os="macos")]
+#[derive(PartialEq, Eq)]
+struct MacPythonFingerprint {
+    path: PathBuf,
+    target: PathBuf,
+    length: u64,
+    modified: Option<std::time::SystemTime>,
+    inode: u64,
+    mode: u32,
+    changed: (i64,i64),
+}
+
+#[cfg(target_os="macos")]
+struct MacPythonCache {
+    candidates: Vec<MacPythonFingerprint>,
+    selected: PathBuf,
+    checked: Instant,
+}
+
+#[cfg(target_os="macos")]
+fn probe_python(path: &std::path::Path, timeout: Duration) -> Option<(u32,u32)> {
+    use std::os::unix::process::CommandExt;
+    // Isolated mode skips PYTHONPATH and user site packages. No application or
+    // inference modules are imported by this small, bounded compatibility probe.
+    let mut child = Command::new(path).args(["-I", "-S", "-B", "-c", "import sys; print('%d.%d' % sys.version_info[:2])"])
+        .process_group(0).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null()).spawn().ok()?;
+    let deadline = Instant::now() + timeout;
+    let Some(output) = child.stdout.take() else { terminate(&mut child); return None; };
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+        let mut text = String::new();
+        let result = output.take(32).read_to_string(&mut text).ok().and_then(|_|python_version(&text));
+        let _ = sender.send(result);
+    });
+    let version = receiver.recv_timeout(timeout).ok().flatten();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => return if status.success() { version } else { None },
+            Ok(None) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(10)),
+            _ => { terminate(&mut child); return None; }
+        }
+    }
+}
+
+#[cfg(target_os="macos")]
+fn discover_macos_python(app: &tauri::AppHandle, venvs: &[PathBuf]) -> Result<std::ffi::OsString, String> {
+    use std::os::unix::fs::MetadataExt;
+    let candidates: Vec<_> = macos_python_candidates(venvs,std::env::var_os("PATH").as_deref()).into_iter().filter_map(|path| {
+        let metadata = std::fs::metadata(&path).ok()?;
+        if !metadata.is_file() { return None; }
+        Some(MacPythonFingerprint { target:std::fs::canonicalize(&path).ok()?, path,
+            length:metadata.len(), modified:metadata.modified().ok(), inode:metadata.ino(), mode:metadata.mode(),
+            changed:(metadata.ctime(),metadata.ctime_nsec()) })
+    }).collect();
+    let state = app.state::<CaptionState>();
+    let mut cache = state.python_cache.lock().map_err(|_|"Speech recognition state is unavailable.")?;
+    if let Some(cached) = cache.as_ref() {
+        if cached.candidates == candidates && cached.checked.elapsed() < Duration::from_secs(60) {
+            return Ok(cached.selected.clone().into_os_string());
+        }
+    }
+    let paths: Vec<_> = candidates.iter().map(|candidate|candidate.path.clone()).collect();
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let selected = compatible_python(&paths, |path| {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() { None } else { probe_python(path,remaining.min(Duration::from_millis(750))) }
+    });
+    if let Some(selected) = selected {
+        let result = selected.clone().into_os_string();
+        *cache = Some(MacPythonCache { candidates, selected, checked:Instant::now() });
+        Ok(result)
+    } else {
+        // Do not cache failure: a newly installed Python must work on the next try.
+        *cache = None;
+        Err("Python 3.10 or newer is required. Install a compatible Python runtime and try again.".into())
+    }
+}
+
 fn python(app: &tauri::AppHandle) -> Result<std::ffi::OsString, String> {
+    if let Some(python) = python_override(|name|std::env::var_os(name)) { return Ok(python); }
     let local=app.path().local_data_dir().map_err(|e|e.to_string())?;
-    let venv=["Pointory", "OnPen", "LayerPen", "MonitorInk"].iter()
+    let venvs:Vec<_>=["Pointory", "OnPen", "LayerPen", "MonitorInk"].iter()
         .map(|name| local.join(name).join("stt-venv").join(if cfg!(windows){"Scripts/python.exe"}else{"bin/python"}))
-        .find(|path| path.is_file());
-    Ok(python_override(|name|std::env::var_os(name))
-        .unwrap_or_else(|| venv.map(|path| path.into_os_string()).unwrap_or_else(|| if cfg!(windows){"python".into()}else{"python3".into()})))
+        .collect();
+    #[cfg(target_os="macos")]
+    { discover_macos_python(app,&venvs) }
+    #[cfg(not(target_os="macos"))]
+    {
+        if let Some(python) = venvs.into_iter().find(|path|path.is_file()) { return Ok(python.into_os_string()); }
+        Ok(if cfg!(windows){"python".into()}else{"python3".into()})
+    }
 }
 
 fn script(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
@@ -49,14 +166,20 @@ fn script(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, String> {
     Ok(if resource.is_file() { resource } else { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../stt").join(name) })
 }
 
-fn script_worker(app: &tauri::AppHandle, name: &str) -> Result<Command, String> {
-    let mut cmd = Command::new(python(app)?);
-    cmd.arg("-u").arg(script(app, name)?).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
+fn python_script(python: &std::ffi::OsStr, script: &std::path::Path) -> Command {
+    let mut cmd = Command::new(python);
+    // Bundled modules can live inside a signed .app. Never write __pycache__
+    // beside those resources, even when the app is launched with a writable bundle.
+    cmd.arg("-B").arg("-u").arg(script).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::null());
     #[cfg(target_os="windows")]
     { use std::os::windows::process::CommandExt; cmd.creation_flags(0x08000000); }
     #[cfg(unix)]
     { use std::os::unix::process::CommandExt; cmd.process_group(0); }
-    Ok(cmd)
+    cmd
+}
+
+fn script_worker(app: &tauri::AppHandle, name: &str) -> Result<Command, String> {
+    Ok(python_script(&python(app)?, &script(app,name)?))
 }
 
 fn worker(app: &tauri::AppHandle) -> Result<Command,String> { script_worker(app, "worker.py") }
@@ -528,6 +651,57 @@ mod tests {
     use super::*;
 
     #[test]
+    fn macos_python_search_preserves_path_order_and_adds_standard_installs() {
+        let path = std::env::join_paths(["/task-tools/bin", "/usr/bin", "/opt/homebrew/bin", "/task-tools/bin"]).unwrap();
+        let candidates = macos_python_candidates(&[],Some(&path));
+        let expected = ["/task-tools/bin/python3", "/usr/bin/python3", "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3", "/Library/Frameworks/Python.framework/Versions/Current/bin/python3"];
+        assert_eq!(candidates, expected.map(PathBuf::from));
+        assert_eq!(macos_python_candidates(&[],None), expected[2..].iter().map(PathBuf::from).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn macos_managed_and_legacy_venvs_require_a_compatible_python() {
+        let local = PathBuf::from("/Users/test/Library/Application Support");
+        let venvs = ["Pointory", "OnPen", "LayerPen", "MonitorInk"].map(|name|local.join(name).join("stt-venv/bin/python"));
+        let path = std::env::join_paths(["/usr/bin","/opt/homebrew/bin"]).unwrap();
+        let candidates = macos_python_candidates(&venvs,Some(&path));
+        assert_eq!(&candidates[..4],&venvs);
+        let base = PathBuf::from("/opt/homebrew/bin/python3");
+        let selected = compatible_python(&candidates, |path|Some(if path == base.as_path() { (3,13) } else { (3,9) }));
+        assert_eq!(selected,Some(base),"A stale 3.9 venv must not shadow a compatible base interpreter");
+        let selected = compatible_python(&candidates, |_|Some((3,13)));
+        assert_eq!(selected,Some(venvs[0].clone()),"A compatible managed venv must remain first");
+        let selected = compatible_python(&candidates, |path|Some(if path == venvs[0].as_path() { (3,9) } else { (3,13) }));
+        assert_eq!(selected,Some(venvs[1].clone()),"A compatible legacy venv must precede base interpreters");
+    }
+
+    #[test]
+    fn macos_python_search_skips_old_and_invalid_interpreters() {
+        let candidates = ["/usr/bin/python3", "/unusable/python3", "/opt/homebrew/bin/python3", "/later/python3"].map(PathBuf::from);
+        let versions = ["3.9\n", "not-a-version", "3.13\n", "3.14\n"];
+        let mut visited = Vec::new();
+        let selected = compatible_python(&candidates, |path| {
+            visited.push(path.to_path_buf());
+            let index = candidates.iter().position(|candidate|candidate == path).unwrap();
+            python_version(versions[index])
+        });
+        assert_eq!(selected, Some(candidates[2].clone()));
+        assert_eq!(visited, candidates[..3]);
+        assert_eq!(compatible_python(&candidates, |_|Some((3,9))), None);
+        assert_eq!(compatible_python(&candidates, |_|Some((3,10))), Some(candidates[0].clone()));
+        for invalid in ["", "3", "3.13.1", "3.x", "version 3.13", "3.13\nextra"] { assert!(python_version(invalid).is_none()); }
+    }
+
+    #[test]
+    fn worker_launch_disables_bytecode_writes_in_bundled_resources() {
+        let script = PathBuf::from("Pointory.app/Contents/Resources/stt/model_manager.py");
+        let command = python_script(std::ffi::OsStr::new("python3"), &script);
+        assert_eq!(command.get_program(), std::ffi::OsStr::new("python3"));
+        assert_eq!(command.get_args().collect::<Vec<_>>(), vec![std::ffi::OsStr::new("-B"),std::ffi::OsStr::new("-u"),script.as_os_str()]);
+    }
+
+    #[test]
     fn explicit_python_overrides_are_detected_in_precedence_order() {
         let values = ["primary-python", "onpen-python", "layerpen-python"];
         for first in 0..3 {
@@ -628,5 +802,68 @@ mod tests {
         assert!(!waiter.join().unwrap(), "Cancellation must detach the current worker");
         assert!(started.elapsed() < Duration::from_secs(5));
         assert!(slot.lock().unwrap().is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_group_fixture() {
+        let Some(directory) = std::env::var_os("POINTORY_GROUP_TEST_DIR").map(PathBuf::from) else { return; };
+        if std::env::var("POINTORY_GROUP_TEST_ROLE").as_deref() == Ok("descendant") {
+            std::fs::write(directory.join("child-ready"),std::process::id().to_string()).unwrap();
+            std::thread::sleep(Duration::from_secs(30));
+        } else {
+            let mut child = Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", "captions::tests::unix_group_fixture", "--nocapture"])
+                .env("POINTORY_GROUP_TEST_ROLE", "descendant")
+                .stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
+            // No process_group here: the descendant must inherit its parent's
+            // task-owned group exactly as runtime_setup's pip process does.
+            std::fs::write(directory.join("parent-ready"),child.id().to_string()).unwrap();
+            let _ = child.wait();
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn unix_terminate_stops_an_owned_process_group_and_descendant() {
+        use std::os::unix::process::CommandExt;
+        struct OwnedGroup { child:Child, directory:PathBuf, cleaned:bool }
+        impl Drop for OwnedGroup {
+            fn drop(&mut self) {
+                if !self.cleaned {
+                    // A failing assertion must never leak the test's sleepers.
+                    let _ = Command::new("/bin/kill").args(["-KILL","--",&format!("-{}",self.child.id())])
+                        .stdout(Stdio::null()).stderr(Stdio::null()).status();
+                    let _ = self.child.kill();
+                    let _ = self.child.wait();
+                }
+                let _ = std::fs::remove_dir_all(&self.directory);
+            }
+        }
+        fn process_running(pid:u32) -> bool {
+            let Ok(output) = Command::new("/bin/ps").args(["-p",&pid.to_string(),"-o","stat="]).output() else { return true; };
+            let state = String::from_utf8_lossy(&output.stdout);
+            let state = state.trim();
+            !state.is_empty() && !state.starts_with('Z')
+        }
+        let directory = std::env::temp_dir().join(format!("pointory-process-group-test-{}",uuid::Uuid::new_v4()));
+        std::fs::create_dir(&directory).unwrap();
+        let child = Command::new(std::env::current_exe().unwrap())
+            .args(["--exact","captions::tests::unix_group_fixture","--nocapture"])
+            .env("POINTORY_GROUP_TEST_DIR",&directory).env("POINTORY_GROUP_TEST_ROLE","parent")
+            .process_group(0).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
+        let mut owned = OwnedGroup { child,directory,cleaned:false };
+        let ready = owned.directory.join("child-ready");
+        let deadline = Instant::now()+Duration::from_secs(5);
+        while !ready.is_file() && Instant::now()<deadline { std::thread::sleep(Duration::from_millis(20)); }
+        let descendant:u32 = std::fs::read_to_string(&ready).expect("Test descendant did not start").trim().parse().unwrap();
+        let output = Command::new("/bin/ps").args(["-p",&descendant.to_string(),"-o","pgid="]).output().unwrap();
+        assert_eq!(String::from_utf8_lossy(&output.stdout).trim().parse::<u32>().unwrap(),owned.child.id(),"Descendant did not inherit the owned process group");
+        terminate(&mut owned.child);
+        let deadline = Instant::now()+Duration::from_secs(5);
+        while process_running(descendant) && Instant::now()<deadline { std::thread::sleep(Duration::from_millis(20)); }
+        assert!(owned.child.try_wait().unwrap().is_some(),"Direct worker remains alive");
+        assert!(!process_running(descendant),"Worker descendant remains alive after terminate()");
+        owned.cleaned = true;
     }
 }

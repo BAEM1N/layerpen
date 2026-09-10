@@ -13,7 +13,8 @@ English guide: [Live captions](../Wiki/EN/07-live-captions.md).
 1. Install **Python 3.10 or newer** for your operating system. Pointory's engine
    installer creates a virtual environment and installs packages; it does not
    install Python itself. For the managed installer, Python must be available
-   as `python` on Windows or `python3` on macOS/Linux. Explicit Python overrides
+   as `python` on Windows or `python3` on Linux. macOS also checks standard
+   Homebrew and Python.org installation paths. Explicit Python overrides
    use a manually managed environment; see [Custom Python environments](#custom-python-environments).
 2. Open **Live captions** using the caption icon in the toolbar or the settings
    button. Choose **Local Whisper**, a model, and an accelerator. `base` is the
@@ -89,6 +90,13 @@ available to Pointory. If you prefer an explicit interpreter path, prepare a
 custom environment as described below. `POINTORY_STT_WORKER` optionally overrides
 the bundled worker; the corresponding `ONPEN_` and `LAYERPEN_` names remain
 compatibility aliases.
+
+On macOS, Pointory checks compatible Python versions on its PATH and in standard
+Homebrew/Python.org locations, because Finder launches may have a different PATH
+from Terminal. A system Python older than 3.10 is skipped. The managed speech
+environment is `~/Library/Application Support/Pointory/stt-venv`; once prepared,
+it is discovered before the system interpreter. Worker processes avoid writing
+Python bytecode into the signed app bundle.
 
 Microphone permissions and system-audio routing differ by OS. System audio has
 only been exercised on Windows. Apple Metal/Core ML/ANE acceleration is not
