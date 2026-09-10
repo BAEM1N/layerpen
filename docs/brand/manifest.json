@@ -1,0 +1,24 @@
+{
+  "symbol": {
+    "status": "Approved by user: B, medium weight, longer down-left nib",
+    "file": "../../ui/assets/pointory-symbol-b.png",
+    "sha256": "95bcb36fe9d640ade42981b84c101781debea934f1ec546953ab5c3487581153"
+  },
+  "wordmark": {
+    "status": "Selected from actual-font comparison and Claude review, per user delegation",
+    "text": "Pointory",
+    "family": "Plus Jakarta Sans",
+    "weight": 600,
+    "letterSpacing": "-0.035em",
+    "review": "claude-grip-review.ko.md"
+  },
+  "fonts": [
+    {
+      "family": "Plus Jakarta Sans",
+      "slug": "plusjakartasans",
+      "source": "https://github.com/google/fonts/tree/main/ofl/plusjakartasans",
+      "sha256": "89b3fb38aa0d275d7a731d0d817a4f1622b316b4d7fbdedcf02ee9099ff68bc8",
+      "license": "SIL Open Font License 1.1"
+    }
+  ]
+}

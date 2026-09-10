@@ -19,9 +19,9 @@ pub fn position(toolbar:Rect, area:Rect, width:i32,height:i32,gap:i32)->(i32,i32
  }
 }
 
-// 36 px controls + 2 px gaps; grip, padding and four fixed controls use 210 px.
+// 36 px controls + 2 px gaps; the 36 px grip, padding and four fixed controls use 234 px.
 pub fn toolbar_size(vertical: bool, item_count: usize) -> (f64, f64) {
-    let length = item_count.min(crate::model::TOOLBAR_ITEMS.len()) as f64 * 38. + 210.;
+    let length = item_count.min(crate::model::TOOLBAR_ITEMS.len()) as f64 * 38. + 234.;
     if vertical { (64., length) } else { (length, 64.) }
 }
 pub fn toolbar_panel_size(vertical: bool, open: bool, item_count: usize) -> (f64, f64) {
@@ -34,21 +34,21 @@ mod layout_tests {
     use super::*;
     #[test]
     fn two_orientations_keep_a_single_strip_and_expand_only_across_it() {
-        assert_eq!(toolbar_size(false, 14), (742., 64.));
-        assert_eq!(toolbar_size(true, 14), (64., 742.));
-        assert_eq!(toolbar_panel_size(false, true, 14), (742., 344.));
-        assert_eq!(toolbar_panel_size(true, true, 14), (344., 742.));
+        assert_eq!(toolbar_size(false, 14), (766., 64.));
+        assert_eq!(toolbar_size(true, 14), (64., 766.));
+        assert_eq!(toolbar_panel_size(false, true, 14), (766., 344.));
+        assert_eq!(toolbar_panel_size(true, true, 14), (344., 766.));
         for vertical in [false, true] {
             assert_eq!(toolbar_panel_size(vertical, false, 14), toolbar_size(vertical, 14));
         }
     }
     #[test]
     fn minimal_toolbar_retains_fixed_controls_and_panel_space() {
-        assert_eq!(toolbar_size(false, 0), (210., 64.));
-        assert_eq!(toolbar_size(true, 0), (64., 210.));
+        assert_eq!(toolbar_size(false, 0), (234., 64.));
+        assert_eq!(toolbar_size(true, 0), (64., 234.));
         assert_eq!(toolbar_panel_size(false, true, 0), (280., 344.));
-        assert_eq!(toolbar_panel_size(true, true, 0), (344., 210.));
-        assert_eq!(toolbar_size(false, 18), (894., 64.));
-        assert_eq!(toolbar_size(false, usize::MAX), (894., 64.));
+        assert_eq!(toolbar_panel_size(true, true, 0), (344., 234.));
+        assert_eq!(toolbar_size(false, 18), (918., 64.));
+        assert_eq!(toolbar_size(false, usize::MAX), (918., 64.));
     }
 }

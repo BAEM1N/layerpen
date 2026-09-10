@@ -4,7 +4,11 @@ body[data-view=toolbar] .toolbar{display:flex;align-items:center;gap:6px;width:m
 .toolbar .toolbar-group{display:flex;align-items:center;gap:2px;flex-shrink:0}
 .toolbar .toolbar-group+.toolbar-group{border-left:1px solid hsl(var(--theme-hue,212) 14% 26%);padding-left:6px}
 .toolbar .toolbar-system{position:sticky;right:-1px;z-index:2;background:hsl(var(--theme-hue,212) 20% 11%)}
-.toolbar .grip{width:12px;height:36px;flex-shrink:0;display:grid;place-items:center;font-size:19px;cursor:grab;color:hsl(var(--theme-hue,212) 12% 52%)}
+.toolbar .grip{position:relative;width:36px;height:36px;flex-shrink:0;display:grid;place-items:center;border-radius:8px;cursor:grab;touch-action:none;color:hsl(var(--theme-hue,212) 18% 82%)}
+.toolbar .grip::after{content:'';position:absolute;right:-4px;top:6px;width:1px;height:24px;background:hsl(var(--theme-hue,212) 14% 26%);pointer-events:none}
+.toolbar .grip .brand-symbol{width:16px;height:28px;pointer-events:none}
+.toolbar .grip:hover{color:hsl(var(--theme-hue,212) 95% 88%);background:hsl(var(--theme-hue,212) 20% 19%)}
+.toolbar .grip:active{cursor:grabbing;background:hsl(var(--theme-hue,212) 25% 23%)}
 .toolbar button{width:36px;height:36px;flex-shrink:0;position:relative;border-radius:8px;background:transparent}
 .toolbar button svg{width:20px;height:20px}
 .toolbar button.active,.toolbar button[aria-expanded=true]{color:hsl(var(--theme-hue,212) 95% 82%);background:hsl(var(--theme-hue,212) 34% 24%);box-shadow:inset 0 0 0 1px hsl(var(--theme-hue,212) 48% 44%)}
@@ -40,7 +44,7 @@ body[data-layout=vertical] .toolbar{flex-direction:column;width:52px;height:max-
 body[data-layout=vertical] .toolbar .toolbar-group{flex-direction:column}
 body[data-layout=vertical] .toolbar .toolbar-group+.toolbar-group{border-left:0;border-top:1px solid hsl(var(--theme-hue,212) 14% 26%);padding-left:0;padding-top:6px}
 body[data-layout=vertical] .toolbar .toolbar-system{right:auto;bottom:-1px}
-body[data-layout=vertical] .toolbar .grip{height:12px;width:36px;line-height:12px}
+body[data-layout=vertical] .toolbar .grip::after{right:auto;top:auto;left:6px;bottom:-4px;width:24px;height:1px}
 body[data-layout=vertical] .toolbar-panel{max-width:calc(100vw - 76px);max-height:calc(100vh - 12px)}
 body[data-view=toolbar] #toast{font-size:11px;max-height:calc(100vh - 12px);overflow:auto;padding:8px;border:1px solid #99764b;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.toolbar button,.toolbar-panel button{transition:none}}

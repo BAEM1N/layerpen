@@ -1,4 +1,5 @@
 import {ensureFonts,fontChoices} from './fonts.js';
+import {brandSymbol} from './brand-symbol.js';
 import {themes,applyTheme} from './theme.js';
 import {languages,loadLanguages,setLanguage,t,localizeDocument} from './i18n.js';
 import {activeZoom,sourcePoint,screenPoint,regionView,sourceWidth} from './zoom.js';
@@ -146,7 +147,7 @@ function mountToolbar() {
   const tile=(name,label,extra)=>`<button type="button" title="${label}" aria-label="${label}" ${extra}>${icon(name)}<span>${label}</span></button>`;
   const panelHeader=title=>`<div class="panel-heading"><strong>${title}</strong>${button('close','닫기','data-panel-close')}</div>`;
   root.innerHTML = `<div class="toolbar" role="toolbar" aria-label="도구막대">
-    <span class="grip" title="도구막대 이동">⠿</span>
+    <span class="grip" title="도구막대 이동" role="img" aria-label="도구막대 이동">${brandSymbol}</span>
     <div class="toolbar-group drawing-tools" role="group" aria-label="필기 도구">${button('mouse','마우스 모드','id="mode"')}${button('pen','펜','data-tool="pen"')}${button('marker','형광펜','data-tool="marker"')}${button('text','텍스트','data-tool="text"')}${button('eraser','지우개','data-tool="eraser"')}${button('shapes','도형과 추가 도구','id="shapesToggle" data-panel="shapesPanel" aria-expanded="false" aria-controls="shapesPanel"')}</div>
     <div class="toolbar-group" role="group" aria-label="색상과 굵기"><button type="button" id="styleToggle" title="색상과 굵기" aria-label="색상과 굵기" data-panel="stylePanel" aria-expanded="false" aria-controls="stylePanel"><span class="current-color"><span class="thickness-dot"></span></span><span id="widthValue"></span></button></div>
     <div class="toolbar-group" role="group" aria-label="편집">${button('undo','실행 취소','data-action="undo" id="undo"')}${button('redo','다시 실행','data-action="redo" id="redo"')}</div>
@@ -156,7 +157,12 @@ function mountToolbar() {
     <section class="toolbar-panel" id="shapesPanel" aria-label="도형과 추가 도구" hidden>${panelHeader('도형과 추가 도구')}<div class="panel-tools">${[['line','직선'],['rectangle','사각형'],['ellipse','타원'],['select','선택 · 이동 · 크기'],['fade','사라지는 잉크'],['zoom','부분 확대']].map(([tool,label])=>tile(tool,label,`data-tool="${tool}"`)).join('')}</div></section>
     <section class="toolbar-panel" id="stylePanel" aria-label="색상과 굵기" hidden>${panelHeader('색상과 굵기')}<div class="palette">${defaults.palette.map((c,i)=>`<button type="button" class="swatch" data-slot="${i}" data-color="${c}" style="--swatch:${c}" title="색상 ${c}" aria-label="색상 ${c}"></button>`).join('')}<label class="custom-color" title="자유색"><input type="color" id="customColor" aria-label="자유색" value="#8b5cf6"></label></div><div class="panel-subheading"><span>굵기</span><output id="sizeValue"></output></div>${sizes('active',4)}<p class="panel-hint">현재 도구에 바로 적용됩니다.</p></section>
     <section class="toolbar-panel" id="morePanel" aria-label="더보기" hidden>${panelHeader('더보기')}<div class="panel-tools">${tile('board','화면 / 화이트 / 블랙보드','id="board"')}${tile('eye','판서 숨기기','id="visibility"')}${tile('zoomReset','확대 종료','id="zoomReset"')}${tile('camera','스크린샷 캡처','id="capture"')}${tile('gif','GIF 내보내기','id="gifExport"')}${tile('share','자료 공유','id="shareOpen"')}${tile('trash','현재 화면 필기 전체 지우기','id="clear" class="danger-action"')}</div></section>`;
-  root.querySelector('.grip').addEventListener('pointerdown', async () => { await setToolbarPanel(null);if(native) native.window.getCurrentWindow().startDragging().catch(error); });
+  root.querySelector('.grip').addEventListener('pointerdown', async event => {
+    if(event.button!==0 || !event.isPrimary)return;
+    event.preventDefault();
+    await setToolbarPanel(null);
+    if(native) native.window.getCurrentWindow().startDragging().catch(error);
+  });
   root.querySelectorAll('[data-panel]').forEach(el=>el.onclick=e=>setToolbarPanel(toolbarPanel===el.dataset.panel?null:el.dataset.panel,e.detail===0));
   root.querySelectorAll('[data-panel-close]').forEach(el=>el.onclick=()=>setToolbarPanel(null,true));
   const perform=(command,args)=>async()=>{await setToolbarPanel(null);await run(command,args);};
@@ -223,7 +229,10 @@ function updateToolbar() {
   root.querySelector('#mode').title=t('마우스 모드')+(preferences().global_shortcut_enabled?' · '+shortcutLabel(preferences().shortcut):'');
   root.querySelector('#undo').disabled=!state.canUndo; root.querySelector('#redo').disabled=!state.canRedo;
   const monitor = state.monitors.find(m=>m.id===state.selected);
-  root.querySelector('.grip').title = monitor ? `${!visible?'◌ 판서 숨김':state.tool==='zoom'&&state.drawing?'확대할 영역을 드래그':state.drawing ? '● 필기 중' : '○ 마우스 모드'}${state.zoom?' · x'+state.zoom.scale.toFixed(1):''} · ${monitor.name}` : '모니터 연결 끊김 · 설정에서 선택';
+  const grip=root.querySelector('.grip');
+  const status=monitor ? `${t(!visible?'◌ 판서 숨김':state.tool==='zoom'&&state.drawing?'확대할 영역을 드래그':state.drawing ? '● 필기 중' : '○ 마우스 모드')}${state.zoom?' · x'+state.zoom.scale.toFixed(1):''} · ${monitor.name}` : t('모니터 연결 끊김 · 설정에서 선택');
+  grip.title=`Pointory · ${t('도구막대 이동')} · ${status}`;
+  grip.setAttribute('aria-label',`Pointory · ${t('도구막대 이동')}`);
   if(applyToolbarConfig(root,preferences().toolbar_items)&&toolbarPanel)setToolbarPanel(null);
 }
 function mountSettings() {
@@ -233,7 +242,7 @@ function mountSettings() {
   <p class="description">선택한 화면에만 필기창이 표시됩니다.<br>다른 모니터는 평소처럼 사용할 수 있어요.</p>
   <div id="monitors" role="radiogroup" aria-label="필기할 모니터"></div>
   <div id="connection" class="connection"></div><p id="warning" class="warning" hidden></p>
-  <section class="preference-section"><h2>도구막대</h2><div class="setting-row"><span>방향</span><div class="segmented"><button data-layout="horizontal">가로</button><button data-layout="vertical">세로</button></div></div><p class="hint">도구막대의 점 무늬를 잡고 원하는 위치로 이동하세요.</p>${toolbarSettingsMarkup()}</section>
+  <section class="preference-section"><h2>도구막대</h2><div class="setting-row"><span>방향</span><div class="segmented"><button data-layout="horizontal">가로</button><button data-layout="vertical">세로</button></div></div><p class="hint">도구막대의 Pointory 심볼을 잡고 원하는 위치로 이동하세요.</p>${toolbarSettingsMarkup()}</section>
   <section class="preference-section"><h2>색상 팔레트</h2><p class="hint">앞의 5칸은 자주 쓰는 색으로 설정하세요. 마지막 칸은 도구막대에서 자유색을 선택합니다.</p><div class="palette-settings">${defaults.palette.map((c,i)=>`<label class="preset-setting"><input type="color" data-preset="${i}" aria-label="기본 색상 ${i+1}" value="${c}"><span>색상 ${i+1}</span></label>`).join('')}<div class="preset-setting picker-info"><span class="picker-sample"></span><span>자유색 · 컬러 피커</span></div></div></section>
   <section class="preference-section"><h2>필기 도구</h2><p class="hint">5가지 굵기를 빠르게 고르거나 1~64px 사이에서 직접 조절하세요.</p>${[['pen_width','펜 · 도형'],['marker_width','형광펜'],['eraser_width','지우개']].map(([key,label])=>`<div class="setting-row width-setting"><span>${label} 기본 굵기</span>${sizes(key,defaults[key],label+' 기본 굵기')}</div>`).join('')}
   <div class="setting-row"><label for="textFont">텍스트 및 설정 글꼴</label><select id="textFont" aria-label="텍스트 및 설정 글꼴"><option value="Malgun Gothic">Malgun Gothic</option></select></div><div class="font-actions"><button type="button" id="importFont" class="outline">TTF 파일 추가</button><span id="fontStatus" class="hint" role="status"></span></div><p class="hint">시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다. 글자 크기는 선택한 펜 굵기에 따라 함께 바뀝니다. 입력 중 Enter는 완료, Shift+Enter는 줄바꿈, Escape는 취소입니다.</p><div class="setting-row"><label for="settingsFontSize">설정 글자 크기</label><select id="settingsFontSize">${[12,14,16,18,20].map(size=>`<option value="${size}">${size} px</option>`).join('')}</select></div><p class="hint">선택한 글꼴은 텍스트와 설정에 함께 적용됩니다. 설정 글자 크기는 펜 굵기나 화면에 입력한 텍스트 크기를 바꾸지 않습니다.</p><div class="setting-row"><label for="opacity">형광펜 불투명도</label><div class="range-value"><input id="opacity" type="range" min="10" max="80" step="5"><output id="opacityValue"></output></div></div></section>

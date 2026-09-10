@@ -12,7 +12,7 @@
   "가로": "Horizontal",
   "세로": "Vertical",
   "도구막대 이동": "Move toolbar",
-  "도구막대의 점 무늬를 잡고 원하는 위치로 이동하세요.": "Drag the dotted handle to move the toolbar.",
+  "도구막대의 Pointory 심볼을 잡고 원하는 위치로 이동하세요.": "Drag the Pointory symbol on the toolbar to move it where you want.",
   "색상 팔레트": "Color palette",
   "앞의 5칸은 자주 쓰는 색으로 설정하세요. 마지막 칸은 도구막대에서 자유색을 선택합니다.": "Set five favorite colors. The last toolbar slot opens the color picker.",
   "자유색 · 컬러 피커": "Custom color · picker",

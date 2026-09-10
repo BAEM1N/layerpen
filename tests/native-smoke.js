@@ -37,13 +37,20 @@
   });
   await run('horizontal-toolbar-and-panels',async()=>{
    await wait(()=>innerHeight===64,'Horizontal size');const rail=document.querySelector('.toolbar');assert(rail.querySelectorAll('button').length===(await call('snapshot')).preferences.toolbar_items.length+4,'Toolbar control count');assert(rail.scrollWidth<=rail.clientWidth+1,'Horizontal clipping');
+   const grip=rail.querySelector('.grip'),gripRect=grip.getBoundingClientRect(),symbol=grip.querySelector('svg');
+   assert(Math.abs(gripRect.width-36)<.5&&Math.abs(gripRect.height-36)<.5,'Brand grip must retain a 36 px drag target');
+   assert(symbol&&symbol.getBoundingClientRect().width>0&&symbol.getBoundingClientRect().height>0&&getComputedStyle(symbol).display!=='none'&&getComputedStyle(symbol).visibility==='visible','Brand grip symbol is not visible');
+   const sourceImage=symbol.querySelector('image');assert(sourceImage?.href.baseVal,'Brand grip image source is missing');
+   const symbolImage=new Image();symbolImage.src=sourceImage.href.baseVal;await symbolImage.decode();
+   assert(symbolImage.naturalWidth===1254&&symbolImage.naturalHeight===1254,'Brand grip artwork did not decode at its original dimensions');
+   assert(/이동|move/i.test(grip.title),'Brand grip tooltip must explain dragging');
    document.querySelector('#shapesToggle').click();await wait(()=>!document.querySelector('#shapesPanel').hidden&&innerHeight>300,'Shapes expansion');document.querySelector('[data-tool=rectangle]').click();
    await wait(async()=>(await call('snapshot')).tool==='rectangle'&&innerHeight===64,'Rectangle selection');document.querySelector('#styleToggle').click();await wait(()=>!document.querySelector('#stylePanel').hidden,'Style panel');
    document.querySelector('[data-slot="1"]').click();document.querySelector('[data-size="16"]').click();await wait(async()=>(await call('snapshot')).width===16,'Pen width');
    const custom=document.querySelector('[data-width-control="active"] [data-width-number]');custom.value='7.5';custom.dispatchEvent(new Event('change',{bubbles:true}));
    await wait(async()=>(await call('snapshot')).width===7.5,'Toolbar custom width did not apply');
    assert(document.querySelector('[data-width-control="active"]').classList.contains('custom-selected'),'Custom width still shows a preset');
-   document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await wait(()=>innerHeight===64,'Escape panel close');return {width:innerWidth,height:innerHeight,customWidth:7.5};
+   document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await wait(()=>innerHeight===64,'Escape panel close');return {width:innerWidth,height:innerHeight,customWidth:7.5,grip:{width:gripRect.width,height:gripRect.height,symbolVisible:true,symbolImageDecoded:true,naturalWidth:symbolImage.naturalWidth,naturalHeight:symbolImage.naturalHeight,title:grip.title}};
   });
   await run('vertical-toolbar-and-width-preservation',async()=>{
    document.querySelector('#orientationToggle').click();await wait(()=>innerWidth===64&&document.body.dataset.layout==='vertical','Vertical size');

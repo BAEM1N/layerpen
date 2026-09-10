@@ -9,7 +9,7 @@
 ## Horizontal or vertical
 
 1. Use the toolbar's **Horizontal/Vertical** switch to change direction. You can also choose the direction under **Toolbar** in settings.
-2. Drag the dotted grip to move the toolbar.
+2. Drag the Pointory symbol to move the toolbar.
 
 ![Pointory toolbar in horizontal and vertical orientations](../assets/toolbar-custom-layouts.jpg)
 
