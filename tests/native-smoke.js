@@ -25,22 +25,29 @@
   let s=await call('snapshot');report.initial=s;await api.event.emit('pointory-validation-progress','snapshot-ready');
   if(!s.connected&&s.monitors.length)await call('select_monitor',{id:s.monitors[0].id});
   const configure=async patch=>{const current=await call('snapshot');await call('configure',{preferences:{...current.preferences,...patch}});await sleep(250);};
-  await configure({language:'ko',layout:'horizontal',global_shortcut_enabled:false,capture_layer_only:true,gif_background:'white',gif_speed:4,spotlight_scale:1});
+  const {defaultToolbarItems}=await import('./toolbar-config.js');
+  const customToolbarItems=defaultToolbarItems.filter(id=>id!=='capture');
+  [customToolbarItems[11],customToolbarItems[12]]=[customToolbarItems[12],customToolbarItems[11]];
+  const customWidths={pen_width:7.5,marker_width:12.5,eraser_width:31};
+  await configure({language:'ko',layout:'horizontal',toolbar_items:defaultToolbarItems,pen_width:4,marker_width:16,eraser_width:24,global_shortcut_enabled:false,capture_layer_only:true,gif_background:'white',gif_speed:4,spotlight_scale:1});
   await run('native-display-and-brand',async()=>{
    const current=await call('snapshot');assert(current.connected,'No connected display');assert(document.title==='Pointory','Wrong title');
    let brand;await wait(async()=>{brand=await remote('settings',"return {title:document.querySelector('h1')?.textContent,logo:document.querySelector('.logo img')?.naturalWidth};");return brand.logo>0;},'Settings logo did not load');
    assert(brand.title==='Pointory'&&brand.logo>0,'Settings logo did not load');return {monitors:current.monitors,brand};
   });
   await run('horizontal-toolbar-and-panels',async()=>{
-   await wait(()=>innerHeight===64,'Horizontal size');const rail=document.querySelector('.toolbar');assert(rail.querySelectorAll('button').length===15,'Toolbar control count');assert(rail.scrollWidth<=rail.clientWidth+1,'Horizontal clipping');
+   await wait(()=>innerHeight===64,'Horizontal size');const rail=document.querySelector('.toolbar');assert(rail.querySelectorAll('button').length===(await call('snapshot')).preferences.toolbar_items.length+4,'Toolbar control count');assert(rail.scrollWidth<=rail.clientWidth+1,'Horizontal clipping');
    document.querySelector('#shapesToggle').click();await wait(()=>!document.querySelector('#shapesPanel').hidden&&innerHeight>300,'Shapes expansion');document.querySelector('[data-tool=rectangle]').click();
    await wait(async()=>(await call('snapshot')).tool==='rectangle'&&innerHeight===64,'Rectangle selection');document.querySelector('#styleToggle').click();await wait(()=>!document.querySelector('#stylePanel').hidden,'Style panel');
    document.querySelector('[data-slot="1"]').click();document.querySelector('[data-size="16"]').click();await wait(async()=>(await call('snapshot')).width===16,'Pen width');
-   document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await wait(()=>innerHeight===64,'Escape panel close');return {width:innerWidth,height:innerHeight};
+   const custom=document.querySelector('[data-width-control="active"] [data-width-number]');custom.value='7.5';custom.dispatchEvent(new Event('change',{bubbles:true}));
+   await wait(async()=>(await call('snapshot')).width===7.5,'Toolbar custom width did not apply');
+   assert(document.querySelector('[data-width-control="active"]').classList.contains('custom-selected'),'Custom width still shows a preset');
+   document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await wait(()=>innerHeight===64,'Escape panel close');return {width:innerWidth,height:innerHeight,customWidth:7.5};
   });
   await run('vertical-toolbar-and-width-preservation',async()=>{
    document.querySelector('#orientationToggle').click();await wait(()=>innerWidth===64&&document.body.dataset.layout==='vertical','Vertical size');
-   assert((await call('snapshot')).width===16,'Orientation lost selected width');const rail=document.querySelector('.toolbar');assert(rail.scrollHeight<=rail.clientHeight+1,'Vertical clipping');
+   assert((await call('snapshot')).width===7.5,'Orientation lost custom width');const rail=document.querySelector('.toolbar');assert(rail.scrollHeight<=rail.clientHeight+1,'Vertical clipping');
    document.querySelector('[data-panel=morePanel]').click();await wait(()=>innerWidth>300,'More panel expansion');document.querySelector('#visibility').click();await wait(async()=>!(await call('snapshot')).visible,'Hide ink');
    await call('action',{name:'toggle_visibility'});assert((await call('snapshot')).visible,'Show ink');return {width:64,height:innerHeight};
   });
@@ -51,7 +58,20 @@
    await remote('settings',`const font=document.querySelector('#textFont');font.value=${JSON.stringify(family)};font.dispatchEvent(new Event('change',{bubbles:true}));return true;`);
    await wait(async()=>(await call('snapshot')).preferences.text_font===family,'Font selection did not save');
    let info;await wait(async()=>{info=await remote('settings',"return {directions:document.querySelectorAll('[data-layout]').length,lines:document.querySelectorAll('[data-lines]').length,selectedFont:document.querySelector('#textFont')?.value,family:getComputedStyle(document.body).fontFamily};");return info.family.includes(family);},'Selected font not applied to settings');
-   assert(info.directions===2&&info.lines===0,'Obsolete layout controls');assert(info.selectedFont===family,'Wrong font selected');return {fontCount:fonts.length,family,info};
+   assert(info.directions===2&&info.lines===0,'Obsolete layout controls');assert(info.selectedFont===family,'Wrong font selected');
+   const previousHeight=innerHeight;
+   await remote('settings',"document.querySelector('.toolbar-config').open=true;document.querySelector('[data-toolbar-toggle=capture]').click();return true;");
+   await wait(async()=>!(await call('snapshot')).preferences.toolbar_items.includes('capture'),'Toolbar visibility choice did not save');
+   await wait(()=>document.querySelector('#capture')?.closest('#morePanel')&&innerHeight<previousHeight,'Hidden shortcut did not move to More or resize toolbar');
+   await wait(()=>remote('settings',"return !document.querySelector('.toolbar-config-controls').disabled;"),'Toolbar settings stayed disabled');
+   await remote('settings',"document.querySelector('[data-toolbar-control=\"board:up\"]').click();return true;");
+   await wait(async()=>JSON.stringify((await call('snapshot')).preferences.toolbar_items)===JSON.stringify(customToolbarItems),'Toolbar order did not save');
+   await wait(()=>JSON.stringify([...document.querySelectorAll('.toolbar [data-toolbar-item]')].map(button=>button.dataset.toolbarItem))===JSON.stringify(customToolbarItems),'Saved order not applied to toolbar');
+   for(const [key,width] of Object.entries(customWidths)) {
+    await remote('settings',`const input=document.querySelector('[data-width-control="${key}"] [data-width-number]');input.value='${width}';input.dispatchEvent(new Event('change',{bubbles:true}));return true;`);
+    await wait(async()=>(await call('snapshot')).preferences[key]===width,'Custom default did not save: '+key);
+   }
+   return {fontCount:fonts.length,family,info,toolbarItems:customToolbarItems,customWidths};
   });
   await run('settings-font-size-and-persistence',async()=>{
    const before=await call('snapshot'),toolbarSize={width:innerWidth,height:innerHeight};
@@ -61,7 +81,11 @@
    assert(info.family.includes(before.preferences.text_font),'Selected font not applied to settings');assert(info.size==='20px'&&info.controlSize==='20px','Settings text size not applied');assert(info.scrollWidth<=info.width+1,'Large settings text clips horizontally');
    // Disk persistence and a second process startup are checked by validation.rs.
    await call('action',{name:'settings'});await call('action',{name:'settings'});
-   const current=await call('snapshot');assert(current.preferences.settings_font_size===20,'Reopening lost font size');assert(current.width===before.width&&current.preferences.pen_width===before.preferences.pen_width,'Settings size changed pen width');assert(innerWidth===toolbarSize.width&&innerHeight===toolbarSize.height,'Settings size changed toolbar');return info;
+   const current=await call('snapshot');assert(current.preferences.settings_font_size===20,'Reopening lost font size');assert(current.width===before.width&&current.preferences.pen_width===before.preferences.pen_width,'Settings size changed pen width');assert(innerWidth===toolbarSize.width&&innerHeight===toolbarSize.height,'Settings size changed toolbar');
+   assert(JSON.stringify(current.preferences.toolbar_items)===JSON.stringify(customToolbarItems),'Reopening lost toolbar configuration');
+   let controls;await wait(async()=>{controls=await remote('settings',"return {capture:document.querySelector('[data-toolbar-toggle=capture]').checked,order:[...document.querySelectorAll('[data-toolbar-toggle]:checked')].map(input=>input.dataset.toolbarToggle),widths:Object.fromEntries(['pen_width','marker_width','eraser_width'].map(key=>[key,Number(document.querySelector('[data-width-control=\"'+key+'\"] [data-width-number]').value)]))};");return !controls.capture&&JSON.stringify(controls.order)===JSON.stringify(customToolbarItems)&&Object.entries(customWidths).every(([key,width])=>controls.widths[key]===width);},'Reopened settings did not synchronize saved toolbar choices and widths');
+   assert(!controls.capture&&JSON.stringify(controls.order)===JSON.stringify(customToolbarItems),'Reopened toolbar settings do not match saved choices');
+   assert(Object.entries(customWidths).every(([key,width])=>controls.widths[key]===width),'Reopened custom width controls do not match saved values');return {...info,controls};
   });
   await run('native-webview-korean-text-entry',async()=>{
    document.querySelector('[data-tool=text]').click();await wait(async()=>{const s=await call('snapshot');return s.tool==='text'&&s.drawing;},'Text drawing mode');await sleep(350);
@@ -77,10 +101,17 @@
   await run('gif-export',async()=>{
    const current=await call('snapshot');const {exportGif}=await import('./replay.js');return {path:await exportGif({invoke:call,state:current,onProgress:()=>{},cancelled:()=>false})};
   });
-  await run('spotlight-toggle',async()=>{
+  await run('spotlight-escape-and-toggle',async()=>{
    assert(!(await call('spotlight_status')),'Spotlight unexpectedly enabled before test');await call('spotlight_toggle');
-   try{await sleep(150);assert(await call('spotlight_status'),'Spotlight did not remain enabled');}finally{if(await call('spotlight_status'))await call('spotlight_toggle');}
-   const disabled=await call('spotlight_status');assert(!disabled,'Spotlight did not stop');return {enabled:true,disabled,magnification:'disabled for permission-free validation'};
+   try{
+    await sleep(150);assert(await call('spotlight_status'),'Spotlight did not remain enabled');
+    document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+    await wait(async()=>!(await call('spotlight_status')),'Escape did not stop spotlight');
+    await call('spotlight_toggle');assert(await call('spotlight_status'),'Spotlight did not restart after Escape');
+    await call('spotlight_toggle');assert(!(await call('spotlight_status')),'Toolbar toggle did not stop spotlight');
+    await call('spotlight_stop');assert(!(await call('spotlight_status')),'Repeated stop must not turn spotlight on');
+   }finally{await call('spotlight_stop');}
+   return {enabled:true,escapeStopped:true,restarted:true,repeatedStopSafe:true,magnification:'disabled for permission-free validation',escape:'WebView key event; physical global key needs a desktop check'};
   });
   await run('classroom-server-start-stop',async()=>{
    let running;try{await call('share_start',{address:'127.0.0.1'});running=await call('share_status');assert(running.running&&running.qr,'Server did not start');assert(new URL(running.url).hostname==='127.0.0.1','Share server did not bind to localhost');}finally{await call('share_stop');}
@@ -92,7 +123,7 @@
    const fail=await api.event.listen('capture-error',event=>{error=event.payload;});
    try{await call('request_capture');await wait(()=>Boolean(saved||error),'Screen capture did not finish');if(error)throw Error(error);return {path:saved};}finally{ok();fail();}
   });
-  await call('action',{name:'mouse'});await configure({layout:'horizontal'});
+  await call('action',{name:'mouse'});await configure({layout:'horizontal',toolbar_items:customToolbarItems,...customWidths});
   report.final=await call('snapshot');report.status=report.checks.every(check=>check.status==='passed')&&report.errors.length===0?'passed':'failed';
  }catch(e){report.status='failed';report.errors.push(String(e));}
  report.finished=new Date().toISOString();await api.event.emit('pointory-validation-finished',report);

@@ -116,7 +116,7 @@ fn place_toolbar(app: &tauri::AppHandle, s: &Session) -> Result<()> {
         .get_webview_window("toolbar")
         .ok_or("Toolbar unavailable")?;
     let vertical = s.prefs.layout == "vertical";
-    let (natural_width,natural_height)=docking::toolbar_size(vertical);
+    let (natural_width,natural_height)=docking::toolbar_size(vertical, s.prefs.toolbar_items.len());
     let width=natural_width.min(m.width as f64/m.scale-16.).max(48.);
     let height=natural_height.min(m.height as f64/m.scale-48.).max(48.);
     toolbar
@@ -139,10 +139,10 @@ fn place_toolbar(app: &tauri::AppHandle, s: &Session) -> Result<()> {
 }
 #[tauri::command]
 async fn toolbar_panel(app: tauri::AppHandle, open: bool) -> Result<()> {
-    let vertical = {
+    let (vertical, item_count) = {
         let state = app.state::<Shared>();
         let s = state.lock().map_err(|e| e.to_string())?;
-        s.prefs.layout == "vertical"
+        (s.prefs.layout == "vertical", s.prefs.toolbar_items.len())
     };
     let toolbar = app.get_webview_window("toolbar").ok_or("Toolbar unavailable")?;
     let monitor = toolbar.current_monitor().map_err(|e| e.to_string())?
@@ -150,7 +150,7 @@ async fn toolbar_panel(app: tauri::AppHandle, open: bool) -> Result<()> {
     let scale = monitor.scale_factor();
     let area = monitor.work_area();
     let current = toolbar.outer_position().map_err(|e| e.to_string())?;
-    let (natural_width, natural_height) = docking::toolbar_panel_size(vertical, open);
+    let (natural_width, natural_height) = docking::toolbar_panel_size(vertical, open, item_count);
     let width = natural_width.min(area.size.width as f64 / scale);
     let height = natural_height.min(area.size.height as f64 / scale);
     let max_x = area.position.x + area.size.width as i32 - (width * scale).round() as i32;
@@ -387,7 +387,7 @@ async fn configure(app: tauri::AppHandle, mut preferences: Preferences) -> Resul
     }
     s.prefs = preferences;
     let result = (|| {
-        if s.prefs.layout != previous.layout {
+        if s.prefs.layout != previous.layout || s.prefs.toolbar_items != previous.toolbar_items {
             place_toolbar(&app, &s)?;
         }
         save(&app, &s.prefs)
@@ -548,8 +548,15 @@ async fn identify(app: tauri::AppHandle) -> Result<()> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app,_,event| {
+        .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app,shortcut,event| {
             if event.state() == ShortcutState::Pressed {
+                if shortcut.key == tauri_plugin_global_shortcut::Code::Escape {
+                    // The plugin holds its shortcut registry during callbacks.
+                    // Defer stop/unregister so Escape cannot deadlock that lock.
+                    let app = app.clone();
+                    tauri::async_runtime::spawn_blocking(move || spotlight::stop(&app));
+                    return;
+                }
                 // Native window operations may wait for the event loop. Never
                 // wait for Shared on that loop while another command owns it.
                 // Queue every press instead of dropping an action on contention.
@@ -560,7 +567,7 @@ fn main() {
                 });
             }
         }).build())
-        .invoke_handler(tauri::generate_handler![toolbar_panel,spotlight::spotlight_toggle,spotlight::spotlight_status,sharing::share_live,sharing::share_open,sharing::share_status,sharing::share_start,sharing::share_stop,sharing::share_add,sharing::share_remove,fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
+        .invoke_handler(tauri::generate_handler![toolbar_panel,spotlight::spotlight_toggle,spotlight::spotlight_stop,spotlight::spotlight_status,sharing::share_live,sharing::share_open,sharing::share_status,sharing::share_start,sharing::share_stop,sharing::share_add,sharing::share_remove,fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
         .setup(|app| {
             let profile = profile_override();
             let (directory, legacy) = profile::directories(&app.path().config_dir()?, &app.path().app_config_dir()?, profile.clone());

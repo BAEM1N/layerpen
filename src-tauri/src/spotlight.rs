@@ -1,14 +1,25 @@
-use std::sync::{Arc,atomic::{AtomicBool,AtomicU64,Ordering}};
+use std::sync::{Arc,Mutex,atomic::{AtomicBool,AtomicU64,Ordering}};
 use tauri::{Emitter,Manager,WebviewUrl,WebviewWindowBuilder};
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use base64::Engine;
 type Result<T> = std::result::Result<T,String>;
-#[derive(Default)]pub struct SpotlightState { pub enabled:Arc<AtomicBool>, generation:Arc<AtomicU64> }
-pub fn stop(app:&tauri::AppHandle){let state=app.state::<SpotlightState>();state.enabled.store(false,Ordering::SeqCst);state.generation.fetch_add(1,Ordering::SeqCst);if let Some(w)=app.get_webview_window("spotlight"){let _=w.hide();}}
+#[derive(Default)]pub struct SpotlightState { pub enabled:Arc<AtomicBool>, generation:Arc<AtomicU64>, lifecycle:Mutex<bool> }
+// Serialize shortcut registration and window transitions so an old rendering
+// thread cannot hide a newly enabled spotlight or leave Escape reserved.
+fn stop_locked(app:&tauri::AppHandle,state:&SpotlightState,escape_registered:&mut bool){
+ state.enabled.store(false,Ordering::SeqCst);state.generation.fetch_add(1,Ordering::SeqCst);
+ if let Some(w)=app.get_webview_window("spotlight"){let _=w.hide();}
+ if *escape_registered&&app.global_shortcut().unregister("Escape").is_ok(){*escape_registered=false;}
+}
+pub fn stop(app:&tauri::AppHandle){let state=app.state::<SpotlightState>();let mut registered=state.lifecycle.lock().unwrap_or_else(|e|e.into_inner());stop_locked(app,&state,&mut registered);}
+#[tauri::command]
+pub async fn spotlight_stop(app:tauri::AppHandle){stop(&app);}
 #[tauri::command]
 pub fn spotlight_status(app:tauri::AppHandle)->bool{app.state::<SpotlightState>().enabled.load(Ordering::SeqCst)}
 #[tauri::command]
 pub async fn spotlight_toggle(app:tauri::AppHandle)->Result<()> {
- if spotlight_status(app.clone()){stop(&app);return Ok(());}
+ let state=app.state::<SpotlightState>();let mut registered=state.lifecycle.lock().map_err(|e|e.to_string())?;
+ if state.enabled.load(Ordering::SeqCst){stop_locked(&app,&state,&mut registered);return Ok(());}
  let display=app.state::<super::Shared>().lock().map_err(|e|e.to_string())?.selected().ok_or("Select a monitor")?.clone();
  let window=if let Some(w)=app.get_webview_window("spotlight"){w}else{WebviewWindowBuilder::new(&app,"spotlight",WebviewUrl::App("spotlight.html".into())).title("Pointory · Spotlight").transparent(true).decorations(false).shadow(false).always_on_top(true).skip_taskbar(true).focused(false).visible(false).build().map_err(|e|e.to_string())?};
  window.set_ignore_cursor_events(true).map_err(|e|e.to_string())?;
@@ -17,7 +28,16 @@ pub async fn spotlight_toggle(app:tauri::AppHandle)->Result<()> {
  super::macos::place_overlay(&window,&display)?;
  super::macos::set_level(&window)?;
  window.show().map_err(|e|e.to_string())?;
- let state=app.state::<SpotlightState>();let flag=state.enabled.clone();let generations=state.generation.clone();let generation=generations.fetch_add(1,Ordering::SeqCst)+1;flag.store(true,Ordering::SeqCst);
+ // Escape belongs to Pointory only while the spotlight is visible. This is
+ // independent of the user's drawing-mode shortcut preference.
+ if !*registered {
+  match app.global_shortcut().register("Escape") {
+   Ok(())=>*registered=true,
+   Err(e)=>{let _=app.emit("capture-error",format!("Escape 전역 키를 등록하지 못했습니다. Pointory에 포커스를 두고 Esc를 누르거나 도구막대 버튼으로 스포트라이트를 끄세요. / Global Escape unavailable; focus Pointory and press Esc or use the toolbar button: {e}"));}
+  }
+ }
+ let flag=state.enabled.clone();let generations=state.generation.clone();let generation=generations.fetch_add(1,Ordering::SeqCst)+1;flag.store(true,Ordering::SeqCst);
+ drop(registered);drop(state);
  std::thread::spawn(move||{
   let mut last=std::time::Instant::now()-std::time::Duration::from_secs(1);
   #[cfg(target_os="windows")]
@@ -40,7 +60,8 @@ pub async fn spotlight_toggle(app:tauri::AppHandle)->Result<()> {
    let _=app.emit_to("spotlight","spotlight-frame",frame);
    std::thread::sleep(std::time::Duration::from_millis(25));
   }
-  if generations.load(Ordering::SeqCst)==generation{stop(&app);}
+  let state=app.state::<SpotlightState>();let mut registered=state.lifecycle.lock().unwrap_or_else(|e|e.into_inner());
+  if generations.load(Ordering::SeqCst)==generation{stop_locked(&app,&state,&mut registered);}
  });Ok(())
 }
 fn crop(x:f64,y:f64,r:f64,w:u32,h:u32)->(u32,u32,u32){let size=(r*2.).round().max(1.).min(w.min(h) as f64) as u32;((x-size as f64/2.).clamp(0.,(w-size) as f64) as u32,(y-size as f64/2.).clamp(0.,(h-size) as f64) as u32,size)}

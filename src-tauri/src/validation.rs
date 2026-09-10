@@ -15,11 +15,25 @@ fn read_json(path: &Path) -> Result<Value, String> {
     serde_json::from_slice(&bytes).map_err(|error| format!("{}: {error}", path.display()))
 }
 
+// JavaScript emits whole-valued widths as integers; Rust stores them as f64.
+// Settings numbers are bounded, so compare their numeric values without rounding.
+fn settings_json_equal(expected: &Value, actual: &Value) -> bool {
+    match (expected, actual) {
+        (Value::Number(left), Value::Number(right)) => left.as_f64().zip(right.as_f64())
+            .is_some_and(|(left, right)| left == right),
+        (Value::Array(left), Value::Array(right)) => left.len() == right.len()
+            && left.iter().zip(right).all(|(left, right)| settings_json_equal(left, right)),
+        (Value::Object(left), Value::Object(right)) => left.len() == right.len()
+            && left.iter().all(|(key, left)| right.get(key).is_some_and(|right| settings_json_equal(left, right))),
+        _ => expected == actual,
+    }
+}
+
 fn persistence_check(name: &str, expected: &Value, actual: &Value, fields: Option<&[&str]>) -> Value {
     let valid = expected.is_object() && actual.is_object();
     let equal = match fields {
-        Some(fields) => fields.iter().all(|field| !expected[*field].is_null() && expected[*field] == actual[*field]),
-        None => expected == actual,
+        Some(fields) => fields.iter().all(|field| !expected[*field].is_null() && settings_json_equal(&expected[*field], &actual[*field])),
+        None => settings_json_equal(expected, actual),
     };
     if valid && equal {
         json!({"name":name,"status":"passed","detail":{"text_font":actual["text_font"],"settings_font_size":actual["settings_font_size"],"pen_width":actual["pen_width"]}})
@@ -36,7 +50,7 @@ fn append_checks(value: &mut Value, profile: &Path, previous: Option<&Result<Val
     let restart_check = previous.map(|previous| match previous {
         Ok(previous) if previous["status"] == "passed" => persistence_check(
             "settings-survive-native-restart", &previous["final"]["preferences"], &value["initial"]["preferences"],
-            Some(&["text_font", "settings_font_size", "pen_width", "marker_width", "eraser_width", "layout", "theme", "global_shortcut_enabled", "capture_layer_only"]),
+            Some(&["text_font", "settings_font_size", "pen_width", "marker_width", "eraser_width", "layout", "toolbar_items", "theme", "global_shortcut_enabled", "capture_layer_only"]),
         ),
         Ok(_) => json!({"name":"settings-survive-native-restart","status":"failed","error":"Previous native report did not pass"}),
         Err(error) => json!({"name":"settings-survive-native-restart","status":"failed","error":error}),
@@ -159,5 +173,36 @@ mod tests {
         let actual = json!({"text_font":"Arial","settings_font_size":20,"monitor":"new"});
         assert_eq!(persistence_check("restart", &expected, &actual, Some(&["text_font", "settings_font_size"]))["status"], "passed");
         assert_eq!(persistence_check("disk", &expected, &actual, None)["status"], "failed");
+    }
+    #[test]
+    fn persistence_accepts_integer_and_float_representations_recursively() {
+        let expected = json!({"pen_width":31,"marker_width":4,"nested":{"values":[1,2.5,null]},"toolbar_items":["pen","capture"]});
+        let actual = json!({"pen_width":31.0,"marker_width":4.0,"nested":{"values":[1.0,2.5,null]},"toolbar_items":["pen","capture"]});
+        assert_ne!(expected, actual);
+        assert_eq!(persistence_check("disk", &expected, &actual, None)["status"], "passed");
+        assert_eq!(persistence_check("restart", &expected, &actual, Some(&["pen_width", "marker_width", "nested", "toolbar_items"]))["status"], "passed");
+    }
+    #[test]
+    fn numeric_normalization_still_rejects_changed_widths_and_toolbar_order() {
+        let expected = json!({"pen_width":7.25,"toolbar_items":["pen","capture"]});
+        let changed_width = json!({"pen_width":7.5,"toolbar_items":["pen","capture"]});
+        let changed_order = json!({"pen_width":7.25,"toolbar_items":["capture","pen"]});
+        for actual in [&changed_width, &changed_order] {
+            assert_eq!(persistence_check("disk", &expected, actual, None)["status"], "failed");
+            assert_eq!(persistence_check("restart", &expected, actual, Some(&["pen_width", "toolbar_items"]))["status"], "failed");
+        }
+    }
+    #[test]
+    fn numeric_normalization_preserves_object_keys_types_and_null_checks() {
+        let expected = json!({"nested":{"width":4},"monitor":null});
+        for actual in [
+            json!({"nested":{},"monitor":null}),
+            json!({"nested":{"width":4.0,"extra":null},"monitor":null}),
+            json!({"nested":{"width":"4"},"monitor":null}),
+            json!({"nested":{"width":4.0}}),
+        ] {
+            assert_eq!(persistence_check("disk", &expected, &actual, None)["status"], "failed");
+        }
+        assert_eq!(persistence_check("restart", &expected, &expected, Some(&["monitor"]))["status"], "failed");
     }
 }

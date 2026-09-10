@@ -12,7 +12,9 @@
 2. Click the circular light **Spotlight** icon in the toolbar, or **Toggle spotlight** in settings.
 3. Move the mouse: a bright circle follows the pointer while the outside is dimmed.
 4. Use mouse mode to click your slides or apps underneath. Drawing mode continues to annotate normally.
-5. Click the spotlight button again to turn it off. Changing the selected monitor stops it. Moving the cursor to another monitor hides the effect.
+5. Press **Esc** or click the spotlight button again to turn it off. While spotlight is enabled, Pointory temporarily registers Esc globally so you can dismiss it while working in another app. Disabling spotlight restores normal Esc input. Changing the selected monitor stops it. Moving the cursor to another monitor hides the effect.
+
+If another program has reserved Esc or the desktop does not support global key registration, Pointory shows a message. Focus the Pointory toolbar and press Esc, or use the spotlight button. Window placement and global shortcuts under Linux Wayland are not supported.
 
 ## Customize
 

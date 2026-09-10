@@ -17,7 +17,7 @@ Applying the selected font to settings and adjusting settings text size are avai
 There is no default T keyboard shortcut. Input methods such as Korean IME are supported by the editor; finish composition before committing.
 
 ## Size follows pen width
-At normal zoom, widths 2 / 4 / 8 / 16 / 24 produce text sizes 16 / 24 / 40 / 72 / 104 px. New text uses the current font and width. Existing text retains its stored font and size. Zoom uses source coordinates to maintain display sizing.
+Use the five presets or adjust pen width from 1 to 64 px with the slider or number input. At normal zoom, widths 2 / 4 / 8 / 16 / 24 produce text sizes 16 / 24 / 40 / 72 / 104 px. New text uses the current font and width. Existing text retains its stored font and size. Zoom uses source coordinates to maintain display sizing.
 
 ## Settings font and text size
 

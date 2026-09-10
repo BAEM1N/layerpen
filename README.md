@@ -46,7 +46,7 @@ Windows needs WebView2. The installer can obtain that runtime. Current builds ar
 | --- | --- | --- |
 | Pen, highlighter, shapes | Mark slides, explain a diagram, highlight a point | [Drawing](Wiki/EN/03-drawing.md) |
 | Typed text + settings fonts | Installed fonts and TTF import; settings font and size controls on `main` | [Text and fonts](Wiki/EN/04-text-fonts.md) |
-| Horizontal or vertical toolbar | Keep everyday tools visible; open shapes, colors, and more beside the toolbar | [Toolbar](Wiki/EN/02-toolbar.md) |
+| Customizable horizontal or vertical toolbar | Choose visible shortcuts and their order; five width presets plus custom 1–64 px input | [Toolbar](Wiki/EN/02-toolbar.md) |
 | Docked settings + five themes | Keep controls beside the toolbar and choose the app color | [Settings](Wiki/EN/02-toolbar.md) |
 | Select, move, resize, undo | Adjust whole annotations without drawing them again | [Editing ink](Wiki/EN/03-drawing.md) |
 | Frozen-region zoom | Magnify a detail and annotate it | [Zoom and boards](Wiki/EN/05-zoom-boards.md) |

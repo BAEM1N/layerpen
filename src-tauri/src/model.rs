@@ -54,6 +54,8 @@ mod text_tests {
 pub fn valid_font(font: &str) -> bool {
     !font.trim().is_empty() && font.chars().count() <= 160 && !font.chars().any(char::is_control)
 }
+// A 1 px brush drawn at the maximum 6x zoom is stored in source coordinates.
+const MIN_STROKE_WIDTH: f64 = 1. / 6.;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Stroke {
     pub tool: String,
@@ -76,7 +78,7 @@ impl Stroke {
             && self.color.starts_with('#')
             && self.color[1..].bytes().all(|c| c.is_ascii_hexdigit())
             && self.width.is_finite()
-            && (0.25..=80.0).contains(&self.width)
+            && (MIN_STROKE_WIDTH..=80.0).contains(&self.width)
             && self.opacity.is_finite()
             && (0.1..=1.0).contains(&self.opacity)
             && (self.times.is_empty()
@@ -243,7 +245,7 @@ impl History {
             p.x = (ax + (p.x - ax) * sx).clamp(0., 1.);
             p.y = (ay + (p.y - ay) * sy).clamp(0., 1.);
         }
-        after.width = (before.width * (sx * sy).sqrt()).clamp(0.25, 80.);
+        after.width = (before.width * (sx * sy).sqrt()).clamp(MIN_STROKE_WIDTH, 80.);
         if !after.valid() {
             return false;
         }
@@ -428,6 +430,13 @@ fn valid_chord(chord: &str) -> bool {
             .and_then(|n| n.parse::<u8>().ok())
             .is_some_and(|n| (1..=12).contains(&n))
 }
+pub const TOOLBAR_ITEMS: [&str; 18] = [
+    "visibility", "mouse", "pen", "marker", "text", "eraser", "shapes", "style", "undo", "redo",
+    "spotlight", "captions", "capture", "board", "zoom_reset", "gif", "share", "clear",
+];
+pub fn default_toolbar_items() -> Vec<String> {
+    TOOLBAR_ITEMS[..14].iter().map(|item| (*item).into()).collect()
+}
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Preferences {
@@ -437,6 +446,7 @@ pub struct Preferences {
     pub theme: String,
     pub monitor: Option<String>,
     pub layout: String,
+    pub toolbar_items: Vec<String>,
     pub pen_width: f64,
     pub marker_width: f64,
     pub eraser_width: f64,
@@ -465,6 +475,7 @@ impl Default for Preferences {
             theme: "blue".into(),
             monitor: None,
             layout: "horizontal".into(),
+            toolbar_items: default_toolbar_items(),
             pen_width: 4.,
             marker_width: 16.,
             eraser_width: 24.,
@@ -517,15 +528,23 @@ impl Preferences {
                 "screen" | "white" | "dark" | "transparent"
             )
             && matches!(self.layout.as_str(), "horizontal" | "vertical")
+            && self.valid_toolbar_items()
             && self.palette.iter().all(|c| {
                 c.len() == 7 && c.starts_with('#') && c[1..].bytes().all(|b| b.is_ascii_hexdigit())
             })
             && [self.pen_width, self.marker_width, self.eraser_width]
                 .iter()
-                .all(|v| v.is_finite() && (1.0..=40.0).contains(v))
+                .all(|v| v.is_finite() && (1.0..=64.0).contains(v))
             && self.marker_opacity.is_finite()
             && (0.1..=0.8).contains(&self.marker_opacity)
             && self.valid_shortcuts()
+    }
+    fn valid_toolbar_items(&self) -> bool {
+        let mut seen = std::collections::HashSet::new();
+        self.toolbar_items.len() <= TOOLBAR_ITEMS.len()
+            && self.toolbar_items.iter().all(|item| {
+                TOOLBAR_ITEMS.contains(&item.as_str()) && seen.insert(item.as_str())
+            })
     }
     pub fn valid_shortcuts(&self) -> bool {
         let global = self.shortcut.replace("CommandOrControl", "Mod");
@@ -750,8 +769,14 @@ mod tests {
     #[test]
     fn zoom_supports_fractional_width_and_omits_image_from_snapshots() {
         let mut st = stroke();
-        st.width = 2. / 6.;
-        assert!(st.valid());
+        for width in [1., 2., 7., 40., 64.] {
+            for scale in [1., 2., 6.] {
+                st.width = width / scale;
+                assert!(st.valid(), "width={width}, scale={scale}");
+            }
+        }
+        st.width = MIN_STROKE_WIDTH - 0.001;
+        assert!(!st.valid());
         let mut session = Session::new(Preferences::default());
         session.zoom = Some(ZoomView {
             id: 1,
@@ -983,6 +1008,7 @@ mod tests {
         assert_eq!(p.monitor.as_deref(), Some("display-a"));
         assert_eq!(p.layout, "horizontal");
         assert_eq!(p.language, "auto");
+        assert_eq!(p.toolbar_items, default_toolbar_items());
         assert_eq!(p.palette.len(), 5);
         let mut custom = p.clone();
         custom.palette[0] = "#123456".into();
@@ -992,6 +1018,99 @@ mod tests {
         assert!(restored.valid());
         custom.palette[0] = "invalid".into();
         assert!(!custom.valid());
+    }
+    #[test]
+    fn customized_toolbar_order_and_empty_strip_survive_restart() {
+        for items in [
+            Vec::<String>::new(),
+            vec!["capture".into(), "visibility".into(), "pen".into()],
+            TOOLBAR_ITEMS.iter().rev().map(|item| (*item).into()).collect(),
+        ] {
+            let prefs = Preferences {
+                toolbar_items: items.clone(),
+                pen_width: 7.,
+                ..Preferences::default()
+            };
+            assert!(prefs.valid());
+            let serialized = serde_json::to_string(&prefs).unwrap();
+            let restored = Session::new(serde_json::from_str(&serialized).unwrap());
+            assert_eq!(restored.prefs.toolbar_items, items);
+            assert_eq!(restored.width, 7.);
+        }
+    }
+    #[test]
+    fn toolbar_preferences_reject_duplicate_unknown_and_fixed_controls() {
+        for items in [
+            vec!["pen", "pen"],
+            vec!["pen", "unknown"],
+            vec!["more"],
+            vec!["orientation"],
+            vec!["settings"],
+            vec!["quit"],
+        ] {
+            let prefs = Preferences {
+                toolbar_items: items.into_iter().map(String::from).collect(),
+                ..Preferences::default()
+            };
+            assert!(!prefs.valid());
+        }
+    }
+    #[test]
+    fn custom_brush_widths_round_trip_and_remain_independent_by_tool() {
+        for widths in [[1., 7., 64.], [2., 16., 24.], [3.5, 12.25, 40.]] {
+            let p = Preferences {
+                pen_width: widths[0],
+                marker_width: widths[1],
+                eraser_width: widths[2],
+                ..Preferences::default()
+            };
+            assert!(p.valid());
+            let restored: Preferences =
+                serde_json::from_str(&serde_json::to_string(&p).unwrap()).unwrap();
+            assert!(restored.valid());
+            for tool in ["pen", "line", "rectangle", "ellipse", "fade", "text"] {
+                assert_eq!(restored.width_for(tool), widths[0]);
+            }
+            assert_eq!(restored.width_for("marker"), widths[1]);
+            assert_eq!(restored.width_for("eraser"), widths[2]);
+            assert_eq!(Session::new(restored).width, widths[0]);
+        }
+    }
+    #[test]
+    fn brush_preferences_reject_out_of_range_values_for_each_tool() {
+        for invalid in [0., 0.99, 64.01, 80., f64::NAN, f64::INFINITY] {
+            for field in 0..3 {
+                let mut p = Preferences::default();
+                match field {
+                    0 => p.pen_width = invalid,
+                    1 => p.marker_width = invalid,
+                    _ => p.eraser_width = invalid,
+                }
+                assert!(!p.valid(), "field={field}, width={invalid}");
+            }
+        }
+    }
+    #[test]
+    fn custom_width_text_strokes_survive_serialization_at_zoom_limits() {
+        for width in [1., 7., 64.] {
+            for scale in [1., 6.] {
+                let mut s = stroke();
+                s.tool = "text".into();
+                s.width = width / scale;
+                s.points.push(Point { x: 0.9, y: 0.9 });
+                s.text = Some(TextData {
+                    content: "한글 Text".into(),
+                    font: "Arial".into(),
+                    size: (8. + 4. * width) / scale,
+                    box_width: 300.,
+                    box_height: 350.,
+                });
+                let restored: Stroke =
+                    serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+                assert!(restored.valid(), "width={width}, scale={scale}");
+                assert_eq!(restored.width, width / scale);
+            }
+        }
     }
     #[test]
     fn legacy_toolbar_lines_are_ignored_without_losing_preferences() {

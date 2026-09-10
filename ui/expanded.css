@@ -3,6 +3,20 @@
 .size-choice{width:27px;height:30px;border:1px solid transparent;border-radius:7px;display:grid;place-items:center;background:hsl(var(--theme-hue, 212) 17.9% 15.3%)}
 .size-choice span{width:var(--dot);height:var(--dot);border-radius:50%;background:currentColor}
 .size-choice.selected{border-color:hsl(var(--theme-hue, 212) 71.4% 69.8%);background:hsl(var(--theme-hue, 212) 28.0% 24.5%);color:hsl(var(--theme-hue, 212) 100.0% 86.5%)}
+.width-controls{min-width:0;width:100%;max-width:320px}
+.width-controls .size-choices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.width-controls .size-choice{width:100%;height:46px;grid-template-rows:25px 13px;gap:1px;padding:3px}
+.width-controls .size-choice small{font-size:10px;line-height:13px;color:inherit}
+.custom-width{display:flex;align-items:center;gap:10px;margin-top:10px}
+.custom-width>input{min-width:0;flex:1;width:100%;accent-color:hsl(var(--theme-hue,212) 80% 72%)}
+.width-number{display:flex;align-items:center;gap:4px;padding:3px 7px;border:1px solid hsl(var(--theme-hue,212) 17% 35%);border-radius:7px;background:hsl(var(--theme-hue,212) 17% 16%);font-size:11px}
+.width-number input{width:54px;min-width:0;padding:4px 0;background:transparent;color:inherit;border:0;font-size:inherit}
+.width-number span{color:hsl(var(--theme-hue,212) 14% 67%)}
+.width-controls.custom-selected .width-number{border-color:hsl(var(--theme-hue,212) 70% 70%)}
+.settings .width-setting{align-items:flex-start}
+.settings .width-setting .width-controls{flex:1 1 220px}
+.settings .width-number{font-size:var(--settings-font-size,14px)}
+body[data-view=toolbar] .toolbar-panel .width-controls .size-choice{width:100%;height:46px}
 .palette{align-items:center}
 .custom-color{width:24px;height:24px;display:block;border-radius:50%;overflow:hidden;border:2px solid hsl(var(--theme-hue, 212) 16.2% 55.1%);background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);cursor:pointer}
 .custom-color input{opacity:0;width:24px;height:24px;cursor:pointer;padding:0;border:0}

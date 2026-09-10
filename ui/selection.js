@@ -12,5 +12,5 @@ export function resizeStroke(stroke,handle,x,y,uniform,w,h){
  const limitX=(east?1-ax:ax)/bw,limitY=(south?1-ay:ay)/bh;
  let sx=Math.min(Math.max((x-ax)*(east?1:-1)/bw,2/w/bw),Math.max(0,limitX)),sy=Math.min(Math.max((y-ay)*(south?1:-1)/bh,2/h/bh),Math.max(0,limitY));
  if(uniform)sx=sy=Math.max(0,Math.min(Math.max(sx,sy),limitX,limitY));
- return {...stroke,width:Math.max(.25,Math.min(80,stroke.width*Math.sqrt(sx*sy))),points:stroke.points.map(p=>({x:Math.max(0,Math.min(1,ax+(p.x-ax)*sx)),y:Math.max(0,Math.min(1,ay+(p.y-ay)*sy))}))};
+ return {...stroke,width:Math.max(1/6,Math.min(80,stroke.width*Math.sqrt(sx*sy))),points:stroke.points.map(p=>({x:Math.max(0,Math.min(1,ax+(p.x-ax)*sx)),y:Math.max(0,Math.min(1,ay+(p.y-ay)*sy))}))};
 }

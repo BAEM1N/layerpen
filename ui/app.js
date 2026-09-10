@@ -9,6 +9,8 @@ import {pickStroke,translateStroke,strokeBounds,resizeStroke} from './selection.
 import { normalizedPoint, redraw, exportLayer } from './drawing.js';
 import { hits } from './hit-test.js';
 import {createTextEditor} from './text-editor.js';
+import {widthControls as sizes,bindWidthControls,syncWidthControls,nextWidth} from './width-controls.js';
+import {defaultToolbarItems,applyToolbarConfig,toolbarSettingsMarkup,bindToolbarSettings,updateToolbarSettings,toolbarPanelAnchor} from './toolbar-config.js';
 let textEditor;
 
 const params = new URLSearchParams(location.search);
@@ -29,12 +31,10 @@ let moveDraft=null,selectedIndex=-1,gestureStart=0;
 let gifRunning=false,gifCancelled=false;
 let zoomRegion=null,zoomImage=null,zoomImageId=null,zoomLoadingId=null;
 const inputPoint=e=>sourcePoint(e.clientX,e.clientY,innerWidth,innerHeight,activeZoom(state));
-const widths=[2,4,8,16,24];
-const widthNames=['아주 가늘게','가늘게','보통','굵게','아주 굵게'];
 const defaults={language:'auto',theme:'blue',text_font:'Malgun Gothic',settings_font_size:14,fade_seconds:3,spotlight_radius:120,spotlight_dim:.65,spotlight_scale:2,layout:'horizontal',pen_width:4,marker_width:16,eraser_width:24,marker_opacity:0.3,shortcut:'CommandOrControl+Shift+D',capture_dir:'',capture_layer_only:false,gif_speed:1,gif_background:'white',gif_repeat:true,tool_shortcuts:true,keybindings:defaultBindings,global_shortcut_enabled:true,palette:['#8b5cf6','#f43f5e','#fbbf24','#38bdf8','#f8fafc']};
 const preferences=()=>({...defaults,...state?.preferences});
+defaults.toolbar_items=defaultToolbarItems;
 const shortcutLabel=value=>value.replace('CommandOrControl',/Mac/.test(navigator.platform)?'⌘':'Ctrl').replace('Shift','⇧').replaceAll('+',' ');
-function sizes(name,value){return `<div class="size-choices" data-size-group="${name}">${widths.map((w,i)=>`<button type="button" class="size-choice ${value===w?'selected':''}" data-size="${w}" title="${widthNames[i]}" aria-label="${widthNames[i]}" aria-pressed="${value===w}"><span style="--dot:${Math.max(3,w*.65)}px"></span></button>`).join('')}</div>`;}
 const icons = {
   more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
   rotate:'<path d="M4 8a8 8 0 0 1 14-3l2 3M20 3v5h-5M20 16A8 8 0 0 1 6 19l-2-3M4 21v-5h5"/>',
@@ -92,6 +92,8 @@ async function invoke(command, args = {}) {
   receive(structuredClone(previewState));
 }
 async function run(command, args) { try { return await invoke(command,args); } catch(e) { error(e); return null; } }
+// Dismiss spotlight even if a panel or text input consumes Escape afterwards.
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!event.repeat)run('spotlight_stop');},true);
 async function loadZoomImage(id){
  if(!id){zoomImage=null;zoomImageId=null;return;}if(zoomImageId===id||zoomLoadingId===id)return;zoomLoadingId=id;
  try{const png=await invoke('zoom_image',{id});const image=new Image();image.src=png;await image.decode();if(state?.zoom?.id===id){zoomImage=png;zoomImageId=id;schedulePaint();}}catch(e){if(state?.zoom?.id===id){error(e);await run('action',{name:'zoom_reset'});}}finally{if(zoomLoadingId===id)zoomLoadingId=null;}
@@ -123,8 +125,9 @@ function positionToolbarPanel() {
   if (!toolbarPanel) return;
   const panel=root.querySelector(`#${toolbarPanel}`), rail=root.querySelector('.toolbar');
   const vertical=preferences().layout==='vertical', r=rail.getBoundingClientRect();
-  panel.style.left=(vertical ? r.right+8 : Math.max(6,Math.min(root.querySelector(`[aria-controls="${toolbarPanel}"]`).getBoundingClientRect().left,innerWidth-270)))+'px';
-  panel.style.top=(vertical ? Math.max(6,Math.min(root.querySelector(`[aria-controls="${toolbarPanel}"]`).getBoundingClientRect().top,innerHeight-panel.offsetHeight-6)) : r.bottom+8)+'px';
+  const anchor=toolbarPanelAnchor(root,toolbarPanel).getBoundingClientRect();
+  panel.style.left=(vertical ? r.right+8 : Math.max(6,Math.min(anchor.left,innerWidth-270)))+'px';
+  panel.style.top=(vertical ? Math.max(6,Math.min(anchor.top,innerHeight-panel.offsetHeight-6)) : r.bottom+8)+'px';
 }
 async function setToolbarPanel(id, focus=false) {
   if(id===toolbarPanel) return panelQueue.catch(()=>{});
@@ -137,7 +140,7 @@ async function setToolbarPanel(id, focus=false) {
   try { await panelQueue; } catch(e) { if(revision===panelRevision){toolbarPanel=null;root.querySelectorAll('[data-panel]').forEach(el=>el.setAttribute('aria-expanded','false'));} error(e);return; }
   if(revision!==panelRevision) return;
   if(id){const panel=root.querySelector(`#${id}`);panel.hidden=false;positionToolbarPanel();if(focus)panel.querySelector('button:not(:disabled)')?.focus();}
-  else if(focus&&previous)root.querySelector(`[aria-controls="${previous}"]`)?.focus();
+  else if(focus&&previous)toolbarPanelAnchor(root,previous)?.focus();
 }
 function mountToolbar() {
   const tile=(name,label,extra)=>`<button type="button" title="${label}" aria-label="${label}" ${extra}>${icon(name)}<span>${label}</span></button>`;
@@ -180,7 +183,7 @@ function mountToolbar() {
   });
   root.querySelectorAll('[data-color]').forEach(el=>el.onclick=()=>state&&run('set_tool',{tool:state.tool,color:el.dataset.color,width:state.width}));
   root.querySelector('#customColor').oninput=event=>state&&run('set_tool',{tool:state.tool,color:event.target.value,width:state.width});
-  root.querySelectorAll('[data-size]').forEach(el=>el.onclick=()=>state&&run('set_tool',{tool:state.tool,color:state.color,width:Number(el.dataset.size)}));
+  bindWidthControls(root.querySelector('[data-width-control="active"]'),()=>state?.width||4,width=>state&&run('set_tool',{tool:state.tool,color:state.color,width}));
   root.querySelector('#capture').onclick=perform('request_capture');
   root.querySelector('#gifExport').onclick=async()=>{await setToolbarPanel(null);startGif();};
   document.addEventListener('pointerdown',e=>{if(toolbarPanel&&!e.target.closest('.toolbar-panel,[data-panel]'))setToolbarPanel(null);});
@@ -212,7 +215,8 @@ function updateToolbar() {
   const shapes=root.querySelector('#shapesToggle'),extraTool=['line','rectangle','ellipse','select','fade','zoom'].includes(state.tool);
   shapes.classList.toggle('active',state.drawing&&extraTool);shapes.innerHTML=icon(extraTool?state.tool:'shapes');
   root.querySelector('.custom-color').classList.toggle('selected',!preferences().palette.some(c=>c.toLowerCase()===state.color.toLowerCase()));
-  root.querySelectorAll('[data-size]').forEach(el=>{el.classList.toggle('selected',Number(el.dataset.size)===state.width);el.setAttribute('aria-pressed',String(Number(el.dataset.size)===state.width));});
+  syncWidthControls(root.querySelector('[data-width-control="active"]'),state.width);
+  root.querySelectorAll('[data-width-control] input,[data-width-control] button').forEach(el=>el.disabled=!state.connected);
   root.querySelector('#customColor').value=state.color;
   root.querySelector('#capture').disabled=state.capturing||!state.connected;
   const gif=root.querySelector('#gifExport');gif.disabled=!gifRunning&&(state.capturing||!state.hasRecording);gif.title=gifRunning?'GIF 내보내기 취소':'GIF 내보내기';
@@ -220,6 +224,7 @@ function updateToolbar() {
   root.querySelector('#undo').disabled=!state.canUndo; root.querySelector('#redo').disabled=!state.canRedo;
   const monitor = state.monitors.find(m=>m.id===state.selected);
   root.querySelector('.grip').title = monitor ? `${!visible?'◌ 판서 숨김':state.tool==='zoom'&&state.drawing?'확대할 영역을 드래그':state.drawing ? '● 필기 중' : '○ 마우스 모드'}${state.zoom?' · x'+state.zoom.scale.toFixed(1):''} · ${monitor.name}` : '모니터 연결 끊김 · 설정에서 선택';
+  if(applyToolbarConfig(root,preferences().toolbar_items)&&toolbarPanel)setToolbarPanel(null);
 }
 function mountSettings() {
   root.innerHTML = `<div class="settings"><header><div class="logo"><img src="brand.svg" alt="Pointory"></div><div><h1>Pointory</h1><p>필요한 화면에만, 가볍게.</p></div><span class="version">v0.1.0</span><button type="button" id="closeSettings" class="panel-close" title="닫기" aria-label="닫기">${icon('close')}</button></header>
@@ -228,14 +233,14 @@ function mountSettings() {
   <p class="description">선택한 화면에만 필기창이 표시됩니다.<br>다른 모니터는 평소처럼 사용할 수 있어요.</p>
   <div id="monitors" role="radiogroup" aria-label="필기할 모니터"></div>
   <div id="connection" class="connection"></div><p id="warning" class="warning" hidden></p>
-  <section class="preference-section"><h2>도구막대</h2><div class="setting-row"><span>방향</span><div class="segmented"><button data-layout="horizontal">가로</button><button data-layout="vertical">세로</button></div></div><p class="hint">도구막대의 점 무늬를 잡고 원하는 위치로 이동하세요.</p></section>
+  <section class="preference-section"><h2>도구막대</h2><div class="setting-row"><span>방향</span><div class="segmented"><button data-layout="horizontal">가로</button><button data-layout="vertical">세로</button></div></div><p class="hint">도구막대의 점 무늬를 잡고 원하는 위치로 이동하세요.</p>${toolbarSettingsMarkup()}</section>
   <section class="preference-section"><h2>색상 팔레트</h2><p class="hint">앞의 5칸은 자주 쓰는 색으로 설정하세요. 마지막 칸은 도구막대에서 자유색을 선택합니다.</p><div class="palette-settings">${defaults.palette.map((c,i)=>`<label class="preset-setting"><input type="color" data-preset="${i}" aria-label="기본 색상 ${i+1}" value="${c}"><span>색상 ${i+1}</span></label>`).join('')}<div class="preset-setting picker-info"><span class="picker-sample"></span><span>자유색 · 컬러 피커</span></div></div></section>
-  <section class="preference-section"><h2>필기 도구</h2>${[['pen_width','펜 · 도형'],['marker_width','형광펜'],['eraser_width','지우개']].map(([key,label])=>`<div class="setting-row"><span>${label} 기본 굵기</span>${sizes(key,defaults[key])}</div>`).join('')}
-  <div class="setting-row"><label for="textFont">텍스트 및 설정 글꼴</label><select id="textFont" aria-label="텍스트 및 설정 글꼴"><option value="Malgun Gothic">Malgun Gothic</option></select></div><div class="font-actions"><button type="button" id="importFont" class="outline">TTF 파일 추가</button><span id="fontStatus" class="hint" role="status"></span></div><p class="hint">시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다. 글자 크기는 펜 굵기 5단계에 따라 16·24·40·72·104px입니다. 입력 중 Enter는 완료, Shift+Enter는 줄바꿈, Escape는 취소입니다.</p><div class="setting-row"><label for="settingsFontSize">설정 글자 크기</label><select id="settingsFontSize">${[12,14,16,18,20].map(size=>`<option value="${size}">${size} px</option>`).join('')}</select></div><p class="hint">선택한 글꼴은 텍스트와 설정에 함께 적용됩니다. 설정 글자 크기는 펜 굵기나 화면에 입력한 텍스트 크기를 바꾸지 않습니다.</p><div class="setting-row"><label for="opacity">형광펜 불투명도</label><div class="range-value"><input id="opacity" type="range" min="10" max="80" step="5"><output id="opacityValue"></output></div></div></section>
+  <section class="preference-section"><h2>필기 도구</h2><p class="hint">5가지 굵기를 빠르게 고르거나 1~64px 사이에서 직접 조절하세요.</p>${[['pen_width','펜 · 도형'],['marker_width','형광펜'],['eraser_width','지우개']].map(([key,label])=>`<div class="setting-row width-setting"><span>${label} 기본 굵기</span>${sizes(key,defaults[key],label+' 기본 굵기')}</div>`).join('')}
+  <div class="setting-row"><label for="textFont">텍스트 및 설정 글꼴</label><select id="textFont" aria-label="텍스트 및 설정 글꼴"><option value="Malgun Gothic">Malgun Gothic</option></select></div><div class="font-actions"><button type="button" id="importFont" class="outline">TTF 파일 추가</button><span id="fontStatus" class="hint" role="status"></span></div><p class="hint">시스템 글꼴을 선택하거나 TTF 파일을 추가하세요. 추가한 파일은 앱에 복사되어 다음 실행에도 사용할 수 있습니다. 글자 크기는 선택한 펜 굵기에 따라 함께 바뀝니다. 입력 중 Enter는 완료, Shift+Enter는 줄바꿈, Escape는 취소입니다.</p><div class="setting-row"><label for="settingsFontSize">설정 글자 크기</label><select id="settingsFontSize">${[12,14,16,18,20].map(size=>`<option value="${size}">${size} px</option>`).join('')}</select></div><p class="hint">선택한 글꼴은 텍스트와 설정에 함께 적용됩니다. 설정 글자 크기는 펜 굵기나 화면에 입력한 텍스트 크기를 바꾸지 않습니다.</p><div class="setting-row"><label for="opacity">형광펜 불투명도</label><div class="range-value"><input id="opacity" type="range" min="10" max="80" step="5"><output id="opacityValue"></output></div></div></section>
   <section class="preference-section"><h2>스크린샷</h2><label class="check-row"><input type="checkbox" id="layerOnly"> 필기 레이어만 캡처</label><p class="hint">기본값은 선택한 화면 + 필기입니다. 레이어만 저장하면 배경이 투명한 PNG가 만들어집니다.</p><label class="field-label" for="captureDir">기본 저장 위치</label><div class="folder-row"><input id="captureDir" readonly aria-label="기본 저장 위치"><button class="outline" id="chooseFolder">폴더 선택</button></div><p class="hint">파일명은 날짜·시간으로 자동 생성됩니다.<br><span id="filenameSample"></span></p><button class="outline" id="captureNow">${icon('camera')} 지금 캡처</button><p class="hint" id="lastCapture" role="status"></p></section>
   <section class="preference-section"><h2>부분 확대 + 판서</h2><p class="hint">돋보기로 영역을 드래그하면 현재 화면을 멈춰 최대 x6까지 확대합니다. 클릭만 하면 x2로 확대합니다. 확대 종료 버튼 또는 마우스 모드로 원래 화면에 돌아갑니다.</p><p class="hint">선택한 굵기는 확대 화면에서 보이는 굵기입니다. x2에서 굵기 8로 그리면 원래 화면에는 굵기 4로 남습니다. PNG는 현재 확대 영역을, GIF는 원래 화면 좌표 전체를 사용합니다. 화면 이동·동영상은 확대 중 갱신되지 않습니다.</p></section>
   <section class="preference-section"><h2>보드와 강조</h2><div class="setting-row"><span>판서 배경</span><div class="segmented"><button data-board="screen">화면</button><button data-board="white">화이트</button><button data-board="black">블랙</button></div></div><p class="hint">배경을 바꿔도 판서는 유지됩니다. 마우스 모드에서는 보드 배경을 내리고, 다시 필기하면 복원합니다.</p><div class="setting-row"><label for="fadeSeconds">강조 잉크 유지 시간</label><select id="fadeSeconds">${[1,2,3,5,10].map(n=>`<option value="${n}">${n}초</option>`).join('')}</select></div><p class="hint">펜을 뗀 뒤 지정한 시간 동안 보이다가 사라집니다. 일반 판서의 선택·실행 취소와 분리하며, GIF에는 강조와 사라지는 과정이 포함됩니다.</p></section>
-  <section class="preference-section"><h2>스포트라이트 · Spotlight</h2><button class="outline" id="spotlightToggle">켜기 / 끄기 · Toggle spotlight</button><label>원 반경 · Radius <input id="spotRadius" type="range" min="40" max="300" step="10"></label><label>바깥 어둡기 · Dimming <input id="spotDim" type="range" min="10" max="90" step="5"></label><label>원 안 확대 · Magnification <select id="spotScale"><option value="1">1× · 강조만 / Highlight only</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="3">3×</option></select></label><p class="hint">커서를 따라가며 클릭은 아래 앱으로 전달됩니다(마우스 모드). 원 안 실시간 확대는 Windows에서 제공합니다. Mac/Linux는 밝기 강조만 제공하며 네이티브 검증이 필요합니다. 도구막대의 스포트라이트 버튼으로 끕니다.<br>Follows the cursor; clicks pass through in mouse mode. Live magnification is Windows-only. Mac/Linux use highlighting only and need native validation. Toggle off from the toolbar.</p></section>
+  <section class="preference-section"><h2>스포트라이트 · Spotlight</h2><button class="outline" id="spotlightToggle">켜기 / 끄기 · Toggle spotlight</button><label>원 반경 · Radius <input id="spotRadius" type="range" min="40" max="300" step="10"></label><label>바깥 어둡기 · Dimming <input id="spotDim" type="range" min="10" max="90" step="5"></label><label>원 안 확대 · Magnification <select id="spotScale"><option value="1">1× · 강조만 / Highlight only</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="3">3×</option></select></label><p class="hint">커서를 따라가며 클릭은 아래 앱으로 전달됩니다(마우스 모드). 원 안 실시간 확대는 Windows에서 제공합니다. Mac/Linux는 밝기 강조만 제공합니다. Esc 또는 도구막대 버튼으로 스포트라이트를 끕니다.</p></section>
   <section class="preference-section"><h2>GIF 내보내기</h2><p class="hint">모두 지우기 이후의 필기·이동·크기 변경·삭제를 재생합니다. 모니터별로 기록하며 앱 종료 시 기록은 사라집니다. 긴 변 최대 960px, 기본 10fps. 긴 기록은 프레임 간격을 조정합니다.</p><div class="setting-row"><label for="gifSpeed">재생 속도</label><select id="gifSpeed">${[0.5,1,2,4].map(v=>`<option value="${v}">x${v}</option>`).join('')}</select></div><div class="setting-row"><label for="gifBackground">배경</label><select id="gifBackground"><option value="screen">현재 화면 / 보드 + 판서</option><option value="white">흰색</option><option value="dark">어두운색</option><option value="transparent">투명 (형광펜 반투명 제한)</option></select></div><label class="check-row"><input type="checkbox" id="gifRepeat"> 반복 재생</label><p class="hint">스크린샷과 같은 폴더에 날짜·시간.gif로 저장합니다. 현재 화면 + 판서를 선택하면 내보내기 시점의 화면을 정지 배경으로 사용합니다. 도구막대·기존 판서는 배경 캡처에서 제외합니다. 화면 동영상은 녹화하지 않습니다.</p><button class="outline" id="gifExport">${icon('gif')} GIF 내보내기</button><p class="hint" id="gifProgress" role="status"></p></section>
   <section class="preference-section"><h2>단축키</h2>
   <p class="hint">키 칸을 클릭한 뒤 원하는 키 조합을 누르세요. Escape는 입력 취소입니다. 켜진 항목끼리 같은 키를 사용할 수 없습니다.</p>
@@ -260,6 +265,7 @@ function mountSettings() {
   root.querySelector('#identify').onclick=()=>run('identify');
   root.querySelector('#quit').onclick=()=>run('action',{name:'quit'});
   const update=async patch=>{const result=await run('configure',{preferences:{...preferences(),...patch}});if(result!==null)root.querySelector('#saved').textContent='저장됨 · 다음 실행에도 유지됩니다';else updateSettings();};
+  bindToolbarSettings(root,()=>preferences().toolbar_items,items=>update({toolbar_items:items}));
   root.querySelector('#theme').onchange=event=>update({theme:event.target.value});
   root.querySelector('#language').onchange=event=>update({language:event.target.value});
   root.querySelector('#textFont').onchange=event=>update({text_font:event.target.value});
@@ -268,7 +274,7 @@ function mountSettings() {
   root.querySelector('#importFont').onclick=async()=>{const button=root.querySelector('#importFont');button.disabled=true;try{if(!native){error('데스크톱 앱으로 실행하세요.');return;}const font=await invoke('import_font');if(font){await refreshFonts();await update({text_font:font.family});}}catch(e){error(e);}finally{button.disabled=false;}};
   root.querySelectorAll('[data-preset]').forEach(el=>el.onchange=()=>{const palette=[...preferences().palette];palette[Number(el.dataset.preset)]=el.value;update({palette});});
   root.querySelectorAll('[data-layout]').forEach(el=>el.onclick=()=>update({layout:el.dataset.layout}));
-  root.querySelectorAll('[data-size-group]').forEach(group=>group.querySelectorAll('[data-size]').forEach(el=>el.onclick=()=>update({[group.dataset.sizeGroup]:Number(el.dataset.size)})));
+  root.querySelectorAll('[data-width-control]').forEach(group=>bindWidthControls(group,()=>preferences()[group.dataset.widthControl],width=>update({[group.dataset.widthControl]:width})));
   root.querySelector('#spotlightToggle').onclick=()=>run('spotlight_toggle');
   root.querySelector('#spotRadius').onchange=e=>update({spotlight_radius:Number(e.target.value)});
   root.querySelector('#spotDim').onchange=e=>update({spotlight_dim:Number(e.target.value)/100});
@@ -303,6 +309,7 @@ async function refreshFonts(){try{const {system,assets}=await fontChoices();cons
 let monitorSignature = '';
 function updateSettings() {
   const p=preferences();
+  updateToolbarSettings(root,p.toolbar_items);
   document.body.style.setProperty('--settings-font-family',JSON.stringify(p.text_font));
   document.body.style.setProperty('--settings-font-size',p.settings_font_size+'px');
   root.querySelector('#settingsFontSize').value=p.settings_font_size;
@@ -313,7 +320,7 @@ function updateSettings() {
   root.querySelector('#fadeSeconds').value=p.fade_seconds;root.querySelectorAll('[data-board]').forEach(el=>{el.classList.toggle('active',el.dataset.board===(state.board||'screen'));el.disabled=state.capturing||!state.connected;});
   root.querySelectorAll('[data-preset]').forEach(el=>{el.value=p.palette[Number(el.dataset.preset)];});
   root.querySelectorAll('[data-layout]').forEach(el=>{el.classList.toggle('active',el.dataset.layout===p.layout);el.setAttribute('aria-pressed',String(el.dataset.layout===p.layout));});
-  root.querySelectorAll('[data-size-group]').forEach(group=>group.querySelectorAll('[data-size]').forEach(el=>{const chosen=Number(el.dataset.size)===p[group.dataset.sizeGroup];el.classList.toggle('selected',chosen);el.setAttribute('aria-pressed',String(chosen));}));
+  root.querySelectorAll('[data-width-control]').forEach(group=>syncWidthControls(group,p[group.dataset.widthControl]));
   if(document.activeElement!==root.querySelector('#opacity'))root.querySelector('#opacity').value=Math.round(p.marker_opacity*100);
   root.querySelector('#opacityValue').textContent=Math.round(p.marker_opacity*100)+'%';
   root.querySelector('#layerOnly').checked=p.capture_layer_only;
@@ -434,8 +441,9 @@ async function startGif(){
  try{await ensureFonts();const path=await exportGif({invoke,state:initial,onProgress:p=>report(`GIF 저장 ${p}%`),cancelled:()=>gifCancelled});report('저장됨: '+path);error('GIF 저장 완료');}catch(e){report(e instanceof Error?e.message:String(e));error(e);}finally{gifRunning=false;receive(await invoke('snapshot'));}
 }
 document.addEventListener('keydown',event=>{
- if(view==='settings'&&event.key==='Escape'&&!event.target.closest('input,select,textarea')){event.preventDefault();run('action',{name:'settings'});return;}
- if(event.target.closest('input,select,textarea')||view==='settings'||event.repeat)return;
+ const editing=event.target instanceof Element&&event.target.closest('input,select,textarea');
+ if(view==='settings'&&event.key==='Escape'&&!editing){event.preventDefault();run('action',{name:'settings'});return;}
+ if(editing||view==='settings'||event.repeat)return;
  if(event.key==='Escape'){event.preventDefault();cancelDraft();run('action',{name:'mouse'});return;}
  if(!preferences().tool_shortcuts||state?.capturing)return;
  const action=matchShortcut(event,preferences().keybindings);if(!action)return;event.preventDefault();
@@ -449,7 +457,7 @@ document.addEventListener('keydown',event=>{
  else if(action==='gif')startGif();
  else if(action==='clear')clearRecording();
  else if(action.startsWith('color'))run('set_tool',{tool:state.tool,color:preferences().palette[Number(action.at(-1))-1],width:state.width});
- else if(action==='thinner'||action==='thicker'){const i=widths.indexOf(state.width),width=widths[Math.max(0,Math.min(4,(i<0?1:i)+(action==='thicker'?1:-1)))];run('set_tool',{tool:state.tool,color:state.color,width});}
+ else if(action==='thinner'||action==='thicker')run('set_tool',{tool:state.tool,color:state.color,width:nextWidth(state.width,action==='thicker'?1:-1)});
 
 });
 async function start() {
