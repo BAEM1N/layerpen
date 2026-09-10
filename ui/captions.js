@@ -1,12 +1,22 @@
 import {applyTheme} from './theme.js';
+import {icon} from './icons.js';
+import {createModelSetup,resolvedAccelerator} from './caption-models.js';
 const $=id=>document.getElementById(id);
 const native=window.__TAURI__;
 const overlay=new URLSearchParams(location.search).has('overlay');
 const defaults={whisper:'base',qwen:'Qwen/Qwen3-ASR-0.6B',openai:'gpt-live-transcribe',gemini:'gemini-3.5-transcribe-live',elevenlabs:'scribe_v2_realtime'};
 let devices=[],accelerators=[],active=false,clearTimer;
+let modelSetup,modelBusy=false,modelReady=false;
 let saved={};try{saved=JSON.parse(localStorage.getItem('pointory-caption-settings')||localStorage.getItem('onpen-caption-settings')||localStorage.getItem('layerpen-caption-settings')||'{}');}catch{}
 const invoke=(name,args={})=>native.core.invoke(name,args);
-function state(running){active=running;$('config').disabled=running;$('start').disabled=running;$('stop').disabled=!running;}
+function syncControls(){$('config').disabled=active||modelBusy;$('audioConfig').disabled=active||modelBusy;$('saveSettings').disabled=active||modelBusy;$('start').disabled=!native||active||modelBusy||(!overlay&&!modelReady);$('stop').disabled=!active;}
+function state(running){active=running;syncControls();modelSetup?.setCaptionActive(running);}
+function labelButton(id,name,label){$(id).innerHTML=icon(name);const span=document.createElement('span');span.textContent=label;$(id).append(span);}
+function liveLabel(text){$('liveBadge').innerHTML=icon('captions');const span=document.createElement('span');span.textContent=text;$('liveBadge').append(span);}
+$('captionBadge').innerHTML=icon('captions');
+labelButton('refresh','refresh','장치 새로고침 / Refresh devices');labelButton('saveSettings','save','설정 저장 / Save settings');
+labelButton('start','play','자막 시작 / Start');labelButton('stop','stop','중지 / Stop');
+liveLabel('LIVE');
 function receive(e){
   if(!e?.type)return;
   if(e.type==='partial'||e.type==='final'){
@@ -19,18 +29,19 @@ function receive(e){
     if(!overlay)$('status').textContent=e.inference_ms!=null?`Live · 추론 ${e.inference_ms} ms · 대기 포함 ${e.lag_ms} ms`:'Live';
   }else if(e.type==='accelerator'){
     $('runtimeDevice').textContent='사용 중 / Active: '+e.text;
-    if(overlay)$('liveBadge').textContent='● LIVE CC · '+e.text;
+    if(overlay)liveLabel('LIVE · '+e.text);
   }else if(e.type==='error'){
     $('error').textContent=e.text;
-    if(overlay){$('captionText').textContent='';$('liveBadge').textContent='CC · Error';}
+    if(e.code==='model_required')modelSetup?.refresh();
+    if(overlay){$('captionText').textContent='';liveLabel('Error');}
   }else if(e.type==='stopped'){
     state(false);$('status').textContent='Stopped';
     clearTimeout(clearTimer);
     $('previewText').textContent='';
-    if(overlay){$('captionText').textContent='';$('liveBadge').textContent='CC · Stopped';}
+    if(overlay){$('captionText').textContent='';liveLabel('Stopped');}
   }else if(e.type==='status'){
     state(true);$('status').textContent=e.text;
-    if(overlay)$('liveBadge').textContent='● LIVE CC · '+e.text;
+    if(overlay)liveLabel('LIVE · '+e.text);
   }
 }
 function listDevices(){
@@ -53,8 +64,18 @@ function providerChanged(){
   $('model').value=defaults[p];$('keyRow').hidden=local;$('key').value='';$('sensitivity').hidden=!local;
   $('acceleratorRow').hidden=!local;$('acceleratorHint').hidden=!local;listAccelerators();
   $('models').replaceChildren(...(p==='whisper'?['tiny','base','small','medium','large-v3','large-v3-turbo']:p==='qwen'?['Qwen/Qwen3-ASR-0.6B','Qwen/Qwen3-ASR-1.7B']:p==='openai'?['gpt-live-transcribe','gpt-4o-transcribe','gpt-4o-mini-transcribe']:[defaults[p]]).map(x=>new Option(x,x)));
-  $('providerHint').textContent=local?'로컬 음성 구간을 반복 인식합니다. Whisper는 CPU·지원 GPU·NPU를 선택할 수 있고 OpenVINO 가속은 tiny/base/small을 지원합니다. 첫 사용 시 모델 다운로드·컴파일이 필요합니다. Qwen은 현재 CPU 경로를 제공합니다.':'연속 오디오를 WebSocket으로 전송합니다. 모델 접근 권한과 유효한 API 키가 필요합니다.';
+  $('providerHint').textContent=local?'Whisper base는 균형 잡힌 기본 모델, tiny는 빠르고 가벼운 모델입니다. 아래에서 먼저 다운로드하세요. OpenVINO는 tiny/base/small을 지원하며 첫 실행 때 컴파일합니다. Qwen은 현재 CPU를 사용합니다.':'연속 오디오를 WebSocket으로 전송합니다. 모델 접근 권한과 유효한 API 키가 필요합니다.';
   $('privacy').textContent=local?'오디오를 외부 STT 서버로 보내지 않습니다. 원음·자막은 자동 저장하지 않습니다.':'시작하면 선택한 제공자에게 오디오가 전송되고 API 사용료가 발생할 수 있습니다. 키는 이 실행에서만 사용하며 제공자의 데이터 정책이 적용됩니다.';
+  modelSetup?.changed();
+}
+async function refreshDevices(){
+  const results=await Promise.allSettled([invoke('caption_devices'),invoke('caption_hardware')]);
+  if(results[0].status==='fulfilled'){devices=results[0].value.devices;listDevices();$('error').textContent='';}
+  else $('error').textContent='오디오 장치를 확인하지 못했습니다. 음성 엔진을 준비한 뒤 장치를 새로고침하세요. / Prepare the speech runtime, then refresh audio devices.';
+  if(results[1].status==='fulfilled'){accelerators=results[1].value.devices;listAccelerators();}
+  if($('accelerator').dataset.saved){$('accelerator').value=[...$('accelerator').options].some(o=>o.value===saved.accelerator)?saved.accelerator:'auto';delete $('accelerator').dataset.saved;}
+  if(saved.device&&[...$('device').options].some(o=>o.value===saved.device))$('device').value=saved.device;
+  await modelSetup?.refresh();
 }
 if(overlay){document.body.classList.add('is-overlay');$('settings').hidden=true;$('overlay').hidden=false;}
 else{
@@ -62,17 +83,26 @@ else{
   providerChanged();
   for(const key of ['model','language','source','threshold'])if(saved[key]!=null)$(key).value=saved[key];
   if(saved.accelerator)$('accelerator').dataset.saved=saved.accelerator;
+  modelSetup=createModelSetup({invoke,getConfig:configValues,getDevices:()=>accelerators,onChange:({busy,ready})=>{modelBusy=busy;modelReady=ready;syncControls();}});
   $('saveSettings').onclick=saveSettings;
   $('provider').onchange=providerChanged;$('source').onchange=listDevices;
-  $('refresh').onclick=async()=>{try{const [audio,hardware]=await Promise.all([invoke('caption_devices'),invoke('caption_hardware')]);devices=audio.devices;accelerators=hardware.devices;listDevices();listAccelerators();if($('accelerator').dataset.saved){$('accelerator').value=[...$('accelerator').options].some(o=>o.value===saved.accelerator)?saved.accelerator:'auto';delete $('accelerator').dataset.saved;}if(saved.device&&[...$('device').options].some(o=>o.value===saved.device))$('device').value=saved.device;}catch(e){$('error').textContent=String(e);}};
+  $('refresh').onclick=refreshDevices;
+  $('model').oninput=()=>modelSetup.changed();$('accelerator').onchange=()=>modelSetup.changed();
   $('form').onsubmit=async e=>{
-    e.preventDefault();if(active)return;
+    e.preventDefault();if(active||modelBusy||!modelSetup.isReady())return;
     $('error').textContent='';$('previewText').textContent='';state(true);
     saveSettings();$('runtimeDevice').textContent='';
     const config={...configValues(),api_key:$('key').value.trim()};
+    if(['whisper','qwen'].includes(config.provider))config.accelerator=resolvedAccelerator(config,accelerators);
     try{await invoke('caption_start',{config});$('key').value='';}catch(e){state(false);$('error').textContent=String(e);}
   };
   $('stop').onclick=async()=>{try{await invoke('caption_stop');}catch(e){$('error').textContent=String(e);}};
 }
-if(native){await native.event.listen('session',e=>applyTheme(e.payload.preferences?.theme));applyTheme((await invoke('snapshot')).preferences?.theme);await native.event.listen('caption',e=>receive(e.payload));receive(await invoke('caption_snapshot'));if(!overlay)$('refresh').click();}
-else{$('error').textContent='UI preview only · Launch the desktop app to use audio.';$('start').disabled=true;}
+if(native){
+  await native.event.listen('session',e=>applyTheme(e.payload.preferences?.theme));applyTheme((await invoke('snapshot')).preferences?.theme);
+  await native.event.listen('caption',e=>receive(e.payload));receive(await invoke('caption_snapshot'));
+  if(!overlay){
+    await native.event.listen('caption-model',async e=>{await modelSetup.receive(e.payload);if(e.payload?.type==='runtime_ready')await refreshDevices();});
+    await modelSetup.receive(await invoke('caption_model_snapshot'));await refreshDevices();
+  }
+}else{$('error').textContent='UI preview only · Launch the desktop app to use audio.';syncControls();}

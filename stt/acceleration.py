@@ -10,19 +10,6 @@ def environment_value(name):
                  if (value := os.environ.get(brand + '_' + name))), None)
 
 
-def openvino_model_location(model, required):
-    override = environment_value('MODEL_DIR')
-    root = Path(override) if override else Path.home() / '.cache' / 'pointory'
-    location = root / ('ov-whisper-' + model)
-    if not override and not all((location / name).is_file() for name in required):
-        # Reuse existing weights in place; upgrades must not redownload large models.
-        for brand in ('onpen', 'layerpen'):
-            legacy = Path.home() / '.cache' / brand / ('ov-whisper-' + model)
-            if all((legacy / name).is_file() for name in required):
-                return root, legacy
-    return root, location
-
-
 def hardware():
     result = [{'id': 'cpu', 'name': 'CPU', 'providers': ['whisper', 'qwen']}]
     try:
@@ -60,22 +47,10 @@ def choose(config, devices):
 
 
 def openvino_recognizer(config, device):
+    from model_manager import require_model
+    location = require_model({**config, 'provider': 'whisper', 'accelerator': 'openvino:' + device})
     import openvino_genai as genai
-    from huggingface_hub import snapshot_download
-    model = config.get('model') or 'base'
     root = Path(environment_value('MODEL_DIR') or Path.home() / '.cache' / 'pointory')
-    if Path(model).is_dir():
-        location = model
-    elif model in ('tiny', 'base', 'small'):
-        required = ['openvino_encoder_model.xml', 'openvino_encoder_model.bin',
-                    'openvino_decoder_model.xml', 'openvino_decoder_model.bin', 'generation_config.json']
-        root, model_location = openvino_model_location(model, required)
-        location = str(model_location)
-        if not all((Path(location) / name).is_file() for name in required):
-            snapshot_download('OpenVINO/whisper-' + model + '-fp16-ov', local_dir=location,
-                              allow_patterns=['*.json', '*.xml', '*.bin', '*.txt'])
-    else:
-        raise SttError('OpenVINO preview supports tiny, base, small, or a local OpenVINO model folder. Use CPU for other Whisper models.')
     cache = root / 'ov-compiled-cache'
     cache.mkdir(parents=True, exist_ok=True)
     engine = genai.WhisperPipeline(location, device, CACHE_DIR=str(cache))

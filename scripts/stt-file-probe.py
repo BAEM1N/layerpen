@@ -4,8 +4,9 @@
 The worker runs its normal segmentation and Whisper CPU inference pipeline. Its
 stdin stays open until it exits: closing stdin after the initial configuration
 would send an implicit stop. File playback is paced to avoid overflowing the
-worker's bounded live-audio queue. A first online run may download model weights;
---offline requires those weights to have already been cached.
+worker's bounded live-audio queue. Prepare the model with model_manager.py in the
+same model directory before running this probe. --offline also sets the runtime's
+network-blocking flags; caption startup never downloads missing weights.
 
 This is a prerecorded synthetic-file test, not microphone, caption UI, model
 accuracy, or GPU/ANE verification. Exit 0 means the checks in report.json passed;
@@ -73,7 +74,7 @@ Logs include the file transcript. Do not use private or third-party recordings.
     parser.add_argument('--audio', required=True, type=existing_file, help='Authored speech audio file; no microphone access')
     parser.add_argument('--model-dir', required=True, type=Path, help='Isolated model and Hugging Face cache directory')
     parser.add_argument('--output-dir', required=True, type=Path, help='New or empty evidence directory')
-    parser.add_argument('--model', default='tiny.en', help='Whisper model name or local model path (default: tiny.en)')
+    parser.add_argument('--model', default='tiny', help='Prepared Whisper model name or local model path (default: tiny)')
     parser.add_argument('--offline', action='store_true', help='Forbid Hugging Face/Transformers network downloads')
     parser.add_argument('--timeout', default=300, type=bounded_timeout, help='Worker run timeout in seconds, 1-300 (default: 300)')
     return parser.parse_args()

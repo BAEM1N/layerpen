@@ -41,29 +41,25 @@ class RuntimeMigrationTests(unittest.TestCase):
                 main()
                 self.assertEqual(diagnostics.called, expected)
 
-    def test_openvino_reuses_complete_legacy_models_without_download(self):
-        required = ['openvino_encoder_model.xml', 'openvino_encoder_model.bin',
-                    'openvino_decoder_model.xml', 'openvino_decoder_model.bin', 'generation_config.json']
+    def test_openvino_reuses_prepared_legacy_location_without_download(self):
         for brand in ('onpen', 'layerpen'):
             with self.subTest(brand=brand), tempfile.TemporaryDirectory() as temp:
                 home = Path(temp)
                 legacy = home / '.cache' / brand / 'ov-whisper-base'
-                legacy.mkdir(parents=True)
-                for name in required:
-                    (legacy / name).write_text('cached')
                 download, pipeline = Mock(), Mock()
                 with patch.dict(os.environ, {}, clear=True), patch('acceleration.Path.home', return_value=home), \
+                     patch('model_manager.require_model', return_value=str(legacy)) as prepared, \
                      patch.dict('sys.modules', {'openvino_genai': SimpleNamespace(WhisperPipeline=pipeline),
                                                'huggingface_hub': SimpleNamespace(snapshot_download=download)}):
                     openvino_recognizer({}, 'CPU')
                 download.assert_not_called()
+                prepared.assert_called_once_with({'provider': 'whisper', 'accelerator': 'openvino:CPU'})
                 pipeline.assert_called_once_with(str(legacy), 'CPU', CACHE_DIR=str(home / '.cache' / 'pointory' / 'ov-compiled-cache'))
-                self.assertTrue(all((legacy / name).is_file() for name in required))
 
-    def test_openvino_downloads_new_models_to_pointory_cache(self):
+    def test_openvino_missing_weights_requires_explicit_download(self):
+        from model_manager import ModelError
         with tempfile.TemporaryDirectory() as temp:
             home = Path(temp)
-            # A partial earlier download must not prevent a fresh, complete download.
             partial = home / '.cache' / 'onpen' / 'ov-whisper-base'
             partial.mkdir(parents=True)
             (partial / 'generation_config.json').write_text('{}')
@@ -71,20 +67,26 @@ class RuntimeMigrationTests(unittest.TestCase):
             with patch.dict(os.environ, {}, clear=True), patch('acceleration.Path.home', return_value=home), \
                  patch.dict('sys.modules', {'openvino_genai': SimpleNamespace(WhisperPipeline=pipeline),
                                            'huggingface_hub': SimpleNamespace(snapshot_download=download)}):
-                openvino_recognizer({}, 'CPU')
-            self.assertEqual(download.call_args.kwargs['local_dir'], str(home / '.cache' / 'pointory' / 'ov-whisper-base'))
+                with self.assertRaises(ModelError) as error:
+                    openvino_recognizer({}, 'CPU')
+            self.assertEqual(error.exception.code, 'model_required')
+            download.assert_not_called()
+            pipeline.assert_not_called()
 
-    def test_explicit_model_root_does_not_silently_use_legacy_models(self):
+    def test_explicit_model_root_does_not_silently_download_or_search_default(self):
+        from model_manager import ModelError
         with tempfile.TemporaryDirectory() as temp:
-            home = Path(temp)
-            custom = home / 'custom'
+            custom = Path(temp) / 'custom'
             download, pipeline = Mock(), Mock()
             with patch.dict(os.environ, {'POINTORY_MODEL_DIR': str(custom)}, clear=True), \
                  patch('acceleration.Path.home', side_effect=AssertionError('Explicit cache must not search default folders')), \
                  patch.dict('sys.modules', {'openvino_genai': SimpleNamespace(WhisperPipeline=pipeline),
                                            'huggingface_hub': SimpleNamespace(snapshot_download=download)}):
-                openvino_recognizer({}, 'CPU')
-            self.assertEqual(download.call_args.kwargs['local_dir'], str(custom / 'ov-whisper-base'))
+                with self.assertRaises(ModelError) as error:
+                    openvino_recognizer({}, 'CPU')
+            self.assertEqual(error.exception.code, 'model_required')
+            download.assert_not_called()
+            pipeline.assert_not_called()
 
 
 class AccelerationTests(unittest.TestCase):

@@ -87,6 +87,12 @@ pub fn start(app: &tauri::AppHandle) {
     if let Err(error) = app.add_capability(r#"{"identifier":"native-validation","windows":["toolbar","settings","overlay","caption-settings","sharing"],"permissions":["core:event:allow-emit"]}"#) {
         eprintln!("Validation capability failed: {error}"); return;
     }
+    if std::env::var("POINTORY_VALIDATION_SUITE").as_deref() == Ok("models") {
+        // Exercise the real CloseRequested path without widening production ACL.
+        if let Err(error) = app.add_capability(r#"{"identifier":"native-model-validation","windows":["caption-settings"],"permissions":["core:window:allow-close","core:window:allow-is-visible"]}"#) {
+            eprintln!("Model validation capability failed: {error}"); return;
+        }
+    }
     // Supply the first successful report only for the second app process, using
     // the same isolated profile. Compare before the script configures anything.
     let previous = std::env::var_os("POINTORY_VALIDATION_PREVIOUS_REPORT").map(|path| {
@@ -150,7 +156,10 @@ pub fn page_loaded(window: &tauri::WebviewWindow) {
     if paths().is_none() { return; }
     eprintln!("Validation injecting into loaded page: {:?}", window.url());
     let screen = std::env::var("POINTORY_VALIDATION_SCREEN").as_deref() == Ok("1");
-    let script = format!("window.__POINTORY_VALIDATION_SCREEN={screen};\n{}", include_str!("../../tests/native-smoke.js"));
+    let suite = if std::env::var("POINTORY_VALIDATION_SUITE").as_deref() == Ok("models") {
+        include_str!("../../tests/native-model-smoke.js")
+    } else { include_str!("../../tests/native-smoke.js") };
+    let script = format!("window.__POINTORY_VALIDATION_SCREEN={screen};\n{suite}");
     if let Err(error) = window.eval(&script) { eprintln!("Validation injection failed: {error}"); }
 }
 

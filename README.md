@@ -54,7 +54,7 @@ Windows needs WebView2. The installer can obtain that runtime. Current builds ar
 | PNG / GIF export | Save an annotated screen, transparent ink, or an ink replay | [Export](Wiki/EN/06-export.md) |
 | Cursor spotlight + magnifier | Follow the pointer with a bright circle; Windows live magnification | [Spotlight](Wiki/EN/11-spotlight.md) |
 | Classroom browser sharing | Selected-file downloads + opt-in live screen on the same LAN | [Sharing](Wiki/EN/10-classroom-sharing.md) |
-| Experimental live captions | Choose an audio device and local or cloud transcription | [Captions](Wiki/EN/07-live-captions.md) |
+| Experimental live captions | Choose an audio device; prepare the speech runtime and download local models in settings on `main` | [Captions](Wiki/EN/07-live-captions.md) |
 
 Looking for an open-source screen annotation alternative to Epic Pen or ZoomIt? Pointory focuses on a selected-monitor overlay, typed annotations, configurable toolbars, and optional captions. It is an independent project, not affiliated with those products.
 
@@ -80,7 +80,7 @@ That is the intended use. Share the **entire selected monitor** and confirm the 
 
 ### Does it support local speech recognition and GPU or NPU acceleration?
 
-Experimental captions can use local Whisper. Available CPU and supported CUDA / Intel OpenVINO GPU or NPU runtimes are detected. Availability depends on hardware, drivers, model, and installed dependencies. Apple GPU / Neural Engine support is not implemented and validated as a release capability. [Details](Wiki/EN/07-live-captions.md).
+Experimental captions can use local Whisper. On `main`, settings can prepare the speech runtime and download the selected model with cancellation and cache reuse; Python 3.10+ must already be installed. Available CPU and supported CUDA / Intel OpenVINO GPU or NPU runtimes are detected. Availability depends on hardware, drivers, model, and installed dependencies. Apple GPU / Neural Engine support is not implemented and validated as a release capability. [Details](Wiki/EN/07-live-captions.md).
 
 ### Does it record my screen or save meeting audio?
 
@@ -132,3 +132,5 @@ If Pointory is useful in your classroom or workflow, **a star helps others disco
 ## License
 
 [MIT](LICENSE) for project-authored code. Dependencies retain their licenses: [notices](THIRD-PARTY-NOTICES.txt) and [source provenance](docs/dependency-licenses/sources.json). Required third-party source archives are included inside the installer / portable package and in the repository.
+
+Functional UI icons use [Lucide (ISC, with Feather MIT notices)](docs/icon-license.md). Full icon license notices are included with the app.

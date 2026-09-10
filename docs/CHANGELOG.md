@@ -1,3 +1,16 @@
+# Unreleased — 2026-09-11
+
+- Unify functional UI icons with pinned Lucide SVGs and bundle the full ISC/Feather MIT notices.
+- Prepare the optional speech runtime from caption settings in a managed virtual environment; Python 3.10+ remains a prerequisite.
+- Add explicit local model downloads with source, license, size, progress, cancellation, retry, and reuse of existing complete caches.
+- Keep preparation active when the settings window closes; stop owned preparation processes when the app quits.
+- Require prepared local models before starting audio, and use local files for inference. Cloud captions expose runtime setup without a local model download.
+- Update English/Korean caption guides with setup screenshots.
+
+Windows validation includes the native model lifecycle fixture, toolbar/settings restart checks, a real Whisper tiny download (78 MB), and offline transcription of a prerecorded test WAV. Live API, microphone accuracy, new Mac/Linux behavior, and GPU/NPU inference were not validated in this change. These changes are on `main`; the published v0.1.0 assets have not been replaced.
+
+---
+
 # Pointory v0.1.0 brand update — 2026-09-09
 
 - Rename the product, repository links, package metadata, installers, and portable assets to Pointory (포인토리).

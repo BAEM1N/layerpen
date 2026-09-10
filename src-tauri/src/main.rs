@@ -229,7 +229,7 @@ async fn snapshot(app: tauri::AppHandle) -> Result<serde_json::Value> {
 #[tauri::command]
 async fn action(app: tauri::AppHandle, name: String) -> Result<()> {
     if name == "quit" {
-        captions::stop(&app);
+        captions::shutdown(&app);
         app.exit(0);
         return Ok(());
     }
@@ -567,7 +567,7 @@ fn main() {
                 });
             }
         }).build())
-        .invoke_handler(tauri::generate_handler![toolbar_panel,spotlight::spotlight_toggle,spotlight::spotlight_stop,spotlight::spotlight_status,sharing::share_live,sharing::share_open,sharing::share_status,sharing::share_start,sharing::share_stop,sharing::share_add,sharing::share_remove,fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
+        .invoke_handler(tauri::generate_handler![toolbar_panel,spotlight::spotlight_toggle,spotlight::spotlight_stop,spotlight::spotlight_status,sharing::share_live,sharing::share_open,sharing::share_status,sharing::share_start,sharing::share_stop,sharing::share_add,sharing::share_remove,fonts::system_fonts,fonts::font_assets,fonts::font_data,fonts::import_font,captions::caption_open,captions::caption_start,captions::caption_stop,captions::caption_snapshot,captions::caption_devices,captions::caption_hardware,captions::caption_model_status,captions::caption_model_download,captions::caption_model_cancel,captions::caption_model_snapshot,captions::caption_runtime_setup,snapshot,action,select_monitor,set_tool,add_stroke,move_stroke,resize_stroke,zoom::start_zoom,zoom::zoom_image,animation::begin_gif,animation::gif_frame,animation::finish_gif,animation::abort_gif,identify,configure,capture::request_capture,capture::save_capture,capture::cancel_capture,capture::choose_capture_folder])
         .setup(|app| {
             let profile = profile_override();
             let (directory, legacy) = profile::directories(&app.path().config_dir()?, &app.path().app_config_dir()?, profile.clone());
@@ -587,6 +587,7 @@ fn main() {
             let mut s = state.lock().map_err(|e| e.to_string())?;
             app.manage(animation::ExportState::default());
             app.manage(captions::CaptionState::default());
+            app.manage(captions::ModelState::default());
             app.manage(sharing::ShareState::default());
             app.manage(spotlight::SpotlightState::default());
             #[cfg(feature = "validation")]
@@ -655,10 +656,13 @@ fn main() {
                 match window.label() {
                     "settings" => { api.prevent_close(); let _ = window.hide(); }
                     "caption-settings" => { api.prevent_close(); captions::stop(window.app_handle()); let _ = window.hide(); }
-                    "toolbar" => { captions::stop(window.app_handle()); window.app_handle().exit(0); },
+                    "toolbar" => { captions::shutdown(window.app_handle()); window.app_handle().exit(0); },
                     _ => {}
                 }
             }
         })
-        .run(tauri::generate_context!()).expect("Pointory could not start");
+        .build(tauri::generate_context!()).expect("Pointory could not start")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) { captions::shutdown(app); }
+        });
 }

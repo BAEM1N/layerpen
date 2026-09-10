@@ -136,26 +136,35 @@ class Segmenter:
 
 
 def recognizer(config):
-    model = config.get('model') or DEFAULT_MODELS[config['provider']]
     language = config.get('language', 'auto')
     language = None if language == 'auto' else language
-    emit('status', text='Loading local model (first use downloads weights)')
+    emit('status', text='Loading downloaded local model')
     from acceleration import hardware, choose, openvino_recognizer
+    from model_manager import require_model, ModelError
     selected = choose(config, hardware())
+    prepared_config = {**config, 'accelerator': selected}
     if config['provider'] == 'whisper' and selected.startswith('openvino:'):
         try:
-            engine = openvino_recognizer(config, selected.split(':', 1)[1])
+            engine = openvino_recognizer(prepared_config, selected.split(':', 1)[1])
             emit('accelerator', device=selected, text='Whisper · ' + selected)
             return engine
+        except ModelError:
+            # Missing files are an explicit setup step, never an implicit download.
+            raise
         except Exception:
             if config.get('accelerator', 'auto') != 'auto':
                 raise SttError('OpenVINO model/device initialization failed. Check the model and driver, or select CPU.')
             emit('status', text='Accelerator initialization failed; falling back to CPU')
             selected = 'cpu'
+            prepared_config['accelerator'] = selected
+    model = require_model(prepared_config)
+    # Some processors do not forward local_files_only; keep their entire worker offline.
+    os.environ['HF_HUB_OFFLINE'] = '1'
+    os.environ['TRANSFORMERS_OFFLINE'] = '1'
     if config['provider'] == 'whisper':
         from faster_whisper import WhisperModel
         engine = WhisperModel(model, device=selected, compute_type='float16' if selected == 'cuda' else 'int8', cpu_threads=4,
-                              download_root=environment_value('MODEL_DIR'))
+                              local_files_only=True)
         emit('accelerator', device=selected, text='Whisper · ' + selected)
         def transcribe(audio):
             parts, _ = engine.transcribe(audio, language=language, beam_size=3,
@@ -166,7 +175,8 @@ def recognizer(config):
     from qwen_asr import Qwen3ASRModel
     torch.set_num_threads(4)
     engine = Qwen3ASRModel.from_pretrained(model, dtype=torch.float32,
-        device_map='cpu', max_inference_batch_size=1, max_new_tokens=128)
+        device_map='cpu', max_inference_batch_size=1, max_new_tokens=128,
+        local_files_only=True, trust_remote_code=False)
     emit('accelerator', device='cpu', text='Qwen3-ASR · CPU')
     names = {'ko': 'Korean', 'en': 'English', 'ja': 'Japanese', 'zh': 'Chinese'}
     return lambda audio: engine.transcribe(audio=(audio, 16000), language=names.get(language))[0].text
@@ -310,7 +320,7 @@ def main():
     except Exception as exc:
         # Only our own messages are emitted: network/library exceptions can contain API keys.
         safe = str(exc) if isinstance(exc, SttError) else 'STT connection/model failed. Check network, dependencies, model access and API key.'
-        emit('error', text=safe)
+        emit('error', text=safe, code=getattr(exc, 'code', 'stt_failed'))
     finally:
         STOP.set()
         emit('stopped', text='Stopped')

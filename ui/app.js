@@ -1,5 +1,6 @@
 import {ensureFonts,fontChoices} from './fonts.js';
 import {brandSymbol} from './brand-symbol.js';
+import {icon} from './icons.js';
 import {themes,applyTheme} from './theme.js';
 import {languages,loadLanguages,setLanguage,t,localizeDocument} from './i18n.js';
 import {activeZoom,sourcePoint,screenPoint,regionView,sourceWidth} from './zoom.js';
@@ -36,35 +37,6 @@ const defaults={language:'auto',theme:'blue',text_font:'Malgun Gothic',settings_
 const preferences=()=>({...defaults,...state?.preferences});
 defaults.toolbar_items=defaultToolbarItems;
 const shortcutLabel=value=>value.replace('CommandOrControl',/Mac/.test(navigator.platform)?'⌘':'Ctrl').replace('Shift','⇧').replaceAll('+',' ');
-const icons = {
-  more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
-  rotate:'<path d="M4 8a8 8 0 0 1 14-3l2 3M20 3v5h-5M20 16A8 8 0 0 1 6 19l-2-3M4 21v-5h5"/>',
-  shapes:'<rect x="3" y="3" width="10" height="10" rx="1"/><circle cx="16" cy="16" r="5"/>',
-  share:'<path d="M12 16V3m-5 5 5-5 5 5M4 13v7h16v-7"/>',
-  spotlight:'<circle cx="12" cy="12" r="5"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2"/>',
-  text:'<path d="M4 4h16M12 4v17M8 21h8M4 4v4m16-4v4"/>',
-  zoom:'<circle cx="10" cy="10" r="7"/><path d="m15 15 7 7M6 10h8m-4-4v8"/>',
-  zoomReset:'<circle cx="10" cy="10" r="7"/><path d="m15 15 7 7M6 10h8"/>',
-  board:'<rect x="2" y="3" width="20" height="15" rx="2"/><path d="M8 22h8m-4-4v4M5 14l5-5 4 3 5-6"/>',
-  fade:'<path d="m14 3 6 6-11 11H3v-6L14 3Z"/><path d="M3 22h2m3 0h2m3 0h1m3 0h.1"/>',
-  select:'<path d="M3 3h7M3 3v7m18-7h-7m7 0v7M3 21h7m-7 0v-7m18 7h-7m7 0v-7M8 12h8m-4-4v8"/>',
-  gif:'<rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 8 6 4-6 4Z"/>',
-  pen:'<path d="m15 3 6 6-12 12H3v-6L15 3Zm-9 9 6 6M13 5l6 6"/>',
-  marker:'<path d="m14 3 7 7-9 9-7-7 9-9ZM5 12l-2 7 2 2 7-2M3 21h7"/>',
-  eraser:'<path d="m14 3 7 7-11 11H6l-5-5L14 3Zm-8 8 8 8M10 21h11"/>',
-  mouse:'<path d="m5 3 15 10-7 1-4 7L5 3Z"/>',
-  settings:'<circle cx="12" cy="12" r="3"/><path d="m9 3-1 3-3 1-2 3 2 2-1 3 3 3 3-1 2 2 3-1 1-3 3-1 1-3-2-2 1-3-3-2-3 1-2-2H9Z"/>',
-  undo:'<path d="M8 5 3 10l5 5M3 10h11a6 6 0 0 1 0 12"/>',
-  redo:'<path d="m16 5 5 5-5 5m5-5H10a6 6 0 0 0 0 12"/>',
-  trash:'<path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/>',
-  close:'<path d="m6 6 12 12M6 18 18 6"/>',
-  monitor:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/>',
-  line:'<path d="m4 20 16-16"/>',rectangle:'<rect x="3" y="5" width="18" height="14" rx="1"/>',ellipse:'<ellipse cx="12" cy="12" rx="9" ry="7"/>',
-  camera:'<path d="M3 6h5l2-3h4l2 3h5v15H3Z"/><circle cx="12" cy="13" r="4"/>',
-  eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
-  eyeOff:'<path d="m3 3 18 18M10 5c7-1 12 7 12 7a23 23 0 0 1-4 4M6 6a23 23 0 0 0-4 6s4 7 10 7c2 0 3-1 4-1M10 10a3 3 0 0 0 4 4"/>',
-};
-function icon(name) { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name] || ''}</svg>`; }
 function error(message) {
   const toast = document.querySelector('#toast'); toast.textContent = message instanceof Error ? message.message : String(message); toast.hidden = false;
   clearTimeout(error.timer); error.timer = setTimeout(() => toast.hidden = true, 7000);
@@ -151,7 +123,7 @@ function mountToolbar() {
     <div class="toolbar-group drawing-tools" role="group" aria-label="필기 도구">${button('mouse','마우스 모드','id="mode"')}${button('pen','펜','data-tool="pen"')}${button('marker','형광펜','data-tool="marker"')}${button('text','텍스트','data-tool="text"')}${button('eraser','지우개','data-tool="eraser"')}${button('shapes','도형과 추가 도구','id="shapesToggle" data-panel="shapesPanel" aria-expanded="false" aria-controls="shapesPanel"')}</div>
     <div class="toolbar-group" role="group" aria-label="색상과 굵기"><button type="button" id="styleToggle" title="색상과 굵기" aria-label="색상과 굵기" data-panel="stylePanel" aria-expanded="false" aria-controls="stylePanel"><span class="current-color"><span class="thickness-dot"></span></span><span id="widthValue"></span></button></div>
     <div class="toolbar-group" role="group" aria-label="편집">${button('undo','실행 취소','data-action="undo" id="undo"')}${button('redo','다시 실행','data-action="redo" id="redo"')}</div>
-    <div class="toolbar-group" role="group" aria-label="발표">${button('spotlight','스포트라이트 · Spotlight','id="spotlightToggle"')}<button type="button" id="captionOpen" title="실시간 자막" aria-label="실시간 자막">CC</button>${button('more','더보기','data-panel="morePanel" aria-expanded="false" aria-controls="morePanel"')}</div>
+    <div class="toolbar-group" role="group" aria-label="발표">${button('spotlight','스포트라이트 · Spotlight','id="spotlightToggle"')}${button('captions','실시간 자막','id="captionOpen"')}${button('more','더보기','data-panel="morePanel" aria-expanded="false" aria-controls="morePanel"')}</div>
     <div class="toolbar-group toolbar-system" role="group" aria-label="앱 제어">${button('rotate','세로로 전환','id="orientationToggle"')}${button('settings','설정','data-action="settings"')}${button('close','앱 종료','data-action="quit" class="quit-app"')}</div>
     </div>
     <section class="toolbar-panel" id="shapesPanel" aria-label="도형과 추가 도구" hidden>${panelHeader('도형과 추가 도구')}<div class="panel-tools">${[['line','직선'],['rectangle','사각형'],['ellipse','타원'],['select','선택 · 이동 · 크기'],['fade','사라지는 잉크'],['zoom','부분 확대']].map(([tool,label])=>tile(tool,label,`data-tool="${tool}"`)).join('')}</div></section>
@@ -264,7 +236,7 @@ function mountSettings() {
   themeEntry.innerHTML=`<label for="theme">테마 색상</label><select id="theme">${Object.entries(themes).map(([id,theme])=>`<option value="${id}">${theme.label}</option>`).join('')}</select><p class="hint">앱의 색상을 변경합니다. 펜 색상은 그대로 유지됩니다.</p>`;
   root.querySelector('.language-setting').after(themeEntry);
   const captionEntry=document.createElement('button');
-  captionEntry.type='button';captionEntry.className='outline';captionEntry.textContent='CC · Live captions · 실시간 자막';
+  captionEntry.type='button';captionEntry.className='outline';captionEntry.innerHTML=`${icon('captions')}<span>실시간 자막</span>`;
   captionEntry.onclick=()=>run('caption_open');
   root.querySelector('.language-setting').after(captionEntry);
   const shareEntry=document.createElement('button');
@@ -348,7 +320,7 @@ function updateSettings() {
       const selected=m.id===state.selected;
       const el=document.createElement('button');el.type='button';el.className=`monitor-card ${selected?'chosen':''}`;
       el.setAttribute('role','radio');el.setAttribute('aria-checked',String(selected));
-      el.innerHTML=`<span class="display-picture">${icon('monitor')}<span>${i+1}</span></span><span class="monitor-copy"><strong></strong><small></small></span><span class="selection-dot">${selected?'✓':''}</span>`;
+      el.innerHTML=`<span class="display-picture">${icon('monitor')}<span>${i+1}</span></span><span class="monitor-copy"><strong></strong><small></small></span><span class="selection-dot">${selected?icon('check'):''}</span>`;
       el.querySelector('strong').textContent=m.name;
       el.querySelector('small').textContent=`${m.width} × ${m.height} · ${Math.round(m.scale*100)}%`;
       el.onclick=async()=>{ el.disabled=true; const result=await run('select_monitor',{id:m.id}); el.disabled=false; if(result!==null)root.querySelector('#saved').textContent='저장됨 · 다음 실행에도 이 화면을 사용합니다'; };
@@ -356,7 +328,7 @@ function updateSettings() {
     });
     if(!state.monitors.length)list.textContent='연결된 모니터를 찾지 못했습니다.';
   }
-  root.querySelector('#connection').textContent=state.connected?'✓  선택한 모니터에서만 필기합니다':'선택한 모니터가 연결되어 있지 않아 필기를 중지했습니다. 다른 화면을 선택하세요.';
+  root.querySelector('#connection').innerHTML=state.connected?`${icon('check')}<span>선택한 모니터에서만 필기합니다</span>`:'<span>선택한 모니터가 연결되어 있지 않아 필기를 중지했습니다. 다른 화면을 선택하세요.</span>';
   root.querySelector('#connection').classList.toggle('missing',!state.connected);
   root.querySelector('#warning').hidden=!state.warning;root.querySelector('#warning').textContent=state.warning||'';
 }

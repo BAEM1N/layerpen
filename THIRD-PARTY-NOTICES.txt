@@ -1,5 +1,11 @@
 Pointory 0.1.0 — third-party dependency notices
 
+Functional UI icons: lucide-static 1.44.0 (ISC; Feather-derived icons: MIT).
+Copyright (c) 2026 Lucide Icons and Contributors; Copyright (c) 2013-present Cole Bemis.
+Full upstream copyright and permission notices are included as LICENSE.lucide in this distribution
+and embedded with the UI at ui/assets/lucide/LICENSE.txt.
+Exact SVG provenance and integrity: docs/icon-sources.json. https://lucide.dev/license
+
 Generated from the Windows x64 Cargo dependency graph, including build dependencies.
 Dependencies retain their own licenses. Pointory does not modify the included crate sources.
 MPL-2.0 source packages are included in third-party-sources.zip in this distribution.

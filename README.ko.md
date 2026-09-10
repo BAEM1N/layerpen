@@ -44,7 +44,7 @@ WebView2가 필요합니다. 설치 프로그램에서 런타임을 받을 수 �
 | PNG·GIF | 필기 이미지와 재생 저장 | [내보내기](Wiki/KR/06-export.md) |
 | 커서 스포트라이트·원형 확대 | 커서 주변만 밝게, Windows 실시간 확대 | [스포트라이트](Wiki/KR/11-spotlight.md) |
 | 교실 브라우저 공유 | 같은 네트워크 자료 다운로드·선택적 실시간 화면 | [자료 공유](Wiki/KR/10-classroom-sharing.md) |
-| 실험적 실시간 자막 | 입력 장치와 STT 제공자 선택 | [자막](Wiki/KR/07-live-captions.md) |
+| 실험적 실시간 자막 | 입력 장치·제공자 선택, 설정에서 음성 엔진 설치와 모델 다운로드(`main`) | [자막](Wiki/KR/07-live-captions.md) |
 
 Epic Pen이나 ZoomIt 같은 화면 필기 도구의 오픈소스 대안을 찾는 분이라면 Pointory의 선택 모니터 오버레이, 텍스트, 툴바 구성을 살펴보세요. 해당 제품과 제휴한 프로젝트는 아닙니다.
 
@@ -71,5 +71,7 @@ v0.2 준비로 M4 Mac의 이전 개발 빌드에서 네이티브 UI·내보내�
 수업이나 업무에 도움이 되었다면 **Star로 프로젝트를 알려주세요.** 사용 경험과 개선 제안도 환영합니다.
 
 ## 라이선스와 이름
+
+기능 아이콘은 [Lucide(ISC, Feather 기반 아이콘은 MIT)](docs/icon-license.md)로 통일하며, 전체 저작권·라이선스 고지문을 앱에 포함합니다.
 
 프로젝트 코드는 [MIT](LICENSE) 라이선스입니다. 의존성은 [각 라이선스](THIRD-PARTY-NOTICES.txt)를 따릅니다. 제품명은 Pointory(포인토리), 저장소는 `BAEM1N/pointory`입니다. 이전 OnPen·LayerPen 설정과 가져온 글꼴을 이어받으며 내부 앱 식별자는 업그레이드 호환성을 위해 유지합니다. 새 기본 저장 위치는 Pictures/Pointory입니다. 도메인 상태는 [브랜드 안내](docs/BRAND.md)를 참고하세요.

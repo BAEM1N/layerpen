@@ -109,7 +109,7 @@
   "● 필기 중": "● Drawing",
   "확대할 영역을 드래그": "Drag an area to magnify",
   "모니터 연결 끊김 · 설정에서 선택": "Monitor disconnected · select in Settings",
-  "✓  선택한 모니터에서만 필기합니다": "✓  Drawing on the selected monitor only",
+  "선택한 모니터에서만 필기합니다": "Drawing on the selected monitor only",
   "선택한 모니터가 연결되어 있지 않아 필기를 중지했습니다. 다른 화면을 선택하세요.": "Drawing paused: the selected monitor is disconnected. Choose another display.",
   "연결된 모니터를 찾지 못했습니다.": "No connected monitor found.",
   "키를 누르세요…": "Press a key…",

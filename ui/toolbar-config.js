@@ -1,3 +1,4 @@
+import {icon} from './icons.js';
 // Keep one live button per action so moving it preserves native event handlers.
 export const toolbarItems = [
   ['visibility','판서 숨기기','#visibility'],
@@ -80,7 +81,7 @@ export function toolbarPanelAnchor(root, panelId) {
 }
 
 export function toolbarSettingsMarkup() {
-  return `<details class="toolbar-config"><summary>바로가기 표시와 순서</summary><p class="hint">체크한 도구는 도구막대에 표시됩니다. 화살표로 순서를 바꾸세요. 숨긴 도구는 더보기에서 사용할 수 있습니다.</p><fieldset class="toolbar-config-controls"><legend class="visually-hidden">도구 바로가기</legend><div class="toolbar-config-list"></div><button type="button" class="outline" data-toolbar-reset>기본 배치로 복원</button></fieldset><p class="hint">더보기, 방향 전환, 설정, 앱 종료는 항상 표시됩니다.</p></details>`;
+  return `<details class="toolbar-config"><summary>바로가기 표시와 순서</summary><p class="hint">체크한 도구는 도구막대에 표시됩니다. 화살표로 순서를 바꾸세요. 숨긴 도구는 더보기에서 사용할 수 있습니다.</p><fieldset class="toolbar-config-controls"><legend class="visually-hidden">도구 바로가기</legend><div class="toolbar-config-list"></div><button type="button" class="outline" data-toolbar-reset>${icon('reset')}<span>기본 배치로 복원</span></button></fieldset><p class="hint">더보기, 방향 전환, 설정, 앱 종료는 항상 표시됩니다.</p></details>`;
 }
 const settingsMounts=new WeakMap();
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -95,7 +96,7 @@ export function updateToolbarSettings(container, items) {
   const ordered=[...selected,...toolbarItems.map(([id])=>id).filter(id=>!selected.includes(id))];
   list.innerHTML=ordered.map(id=>{
     const index=selected.indexOf(id), on=index>=0;
-    return `<div class="toolbar-config-row${on?' selected':''}" data-toolbar-row="${id}" role="group" aria-label="${escape(labels.get(id))}"><label><input type="checkbox" data-toolbar-toggle="${id}" data-toolbar-control="${id}:toggle"${on?' checked':''}><span>${escape(labels.get(id))}</span></label><div class="toolbar-reorder"><button type="button" data-toolbar-move="${id}" data-direction="-1" data-toolbar-control="${id}:up" title="앞으로 이동" aria-label="앞으로 이동"${!on||index===0?' disabled':''}>↑</button><button type="button" data-toolbar-move="${id}" data-direction="1" data-toolbar-control="${id}:down" title="뒤로 이동" aria-label="뒤로 이동"${!on||index===selected.length-1?' disabled':''}>↓</button></div></div>`;
+    return `<div class="toolbar-config-row${on?' selected':''}" data-toolbar-row="${id}" role="group" aria-label="${escape(labels.get(id))}"><label><input type="checkbox" data-toolbar-toggle="${id}" data-toolbar-control="${id}:toggle"${on?' checked':''}><span>${escape(labels.get(id))}</span></label><div class="toolbar-reorder"><button type="button" data-toolbar-move="${id}" data-direction="-1" data-toolbar-control="${id}:up" title="앞으로 이동" aria-label="앞으로 이동"${!on||index===0?' disabled':''}>${icon('chevronUp')}</button><button type="button" data-toolbar-move="${id}" data-direction="1" data-toolbar-control="${id}:down" title="뒤로 이동" aria-label="뒤로 이동"${!on||index===selected.length-1?' disabled':''}>${icon('chevronDown')}</button></div></div>`;
   }).join('');
   list.dataset.selection=signature;
   if(restore) container.querySelector(`[data-toolbar-control="${restore}"]`)?.focus({preventScroll:true});
