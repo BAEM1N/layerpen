@@ -2,7 +2,23 @@
 
 확인일: 2026-09-10. 현재 미리보기 Windows 설치기는 `NotSigned`, Mac 앱은 ad hoc 서명입니다. Mac의 `codesign verify` 통과는 개발용 무결성 확인이며 Developer ID 서명·Apple 공증을 완료했다는 의미가 아닙니다.
 
-**우선 권장 경로는 Mac의 Developer ID 서명·공증 DMG 직접 배포입니다. Windows는 한국 조직 명의라면 Azure Artifact Signing, 개인 오픈소스라면 SignPath Foundation 신청 가능성을 먼저 검토합니다.** 명의와 서비스 가입 여부는 아직 확정하지 않았습니다.
+**Windows의 목표는 사용자가 설치·실행할 때 경고를 만나지 않게 하는 것입니다. SmartScreen 경고를 피하는 것이 최우선이면 Microsoft Store 배포를 우선 검토합니다. 웹에서 EXE를 직접 내려받는 경로는 정식 서명 후에도 초기 경고가 남을 수 있습니다.** 직접 EXE 배포에 사용할 서명은 한국 조직 명의라면 Azure Artifact Signing, 개인 오픈소스라면 SignPath Foundation을 검토합니다. Mac은 Developer ID 서명·공증 DMG를 권장합니다. 명의와 서비스 가입 여부는 아직 확정하지 않았습니다.
+
+## EXE 설치·실행 경고에 대한 결론
+
+| 사용자에게 보이는 내용 | 원인과 해결 조건 |
+| --- | --- |
+| `알 수 없는 게시자` | 신뢰할 수 있는 Authenticode 서명으로 검증된 게시자를 표시합니다. 서명된 파일의 무결성과 인증서 체인도 유효해야 합니다. |
+| `Windows의 PC 보호` / 인식할 수 없는 앱 | SmartScreen 평판 문제입니다. Azure·OV·EV 서명 모두 새 앱의 경고를 즉시 없애는 보장이 없으며, EV도 예외가 아닙니다. |
+| `이 앱이 디바이스를 변경하도록 허용하시겠어요?` | 관리자 권한 요청인 UAC입니다. 정식 서명을 해도 관리자 권한이 필요하면 동의 창이 뜹니다. |
+
+[Microsoft SmartScreen 설명](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation) · [UAC와 서명된 게시자](https://learn.microsoft.com/en-us/windows/security/application-security/application-control/user-account-control/how-it-works)
+
+Pointory의 현재 NSIS 설정은 `currentUser`, 생성된 설치 스크립트는 `RequestExecutionLevel user`입니다. Pointory 설치기 자체는 기본적으로 관리자 권한을 요청하지 않습니다. 의존성 설치나 조직 정책을 포함해 어떤 PC에서도 아무 동의 창이 없다는 뜻은 아닙니다.
+
+Microsoft Store에서 설치하는 MSIX는 Microsoft가 서명하고 SmartScreen 다운로드 경고 대상이 아닙니다. Store에 EXE/MSI 방식으로 제출하는 경우도 Store 설치 중 SmartScreen 안내는 없지만, 개발자가 EXE와 내부 PE를 직접 서명해야 하고 UAC는 별개입니다. **Store 등록 후 같은 EXE를 웹에서 직접 내려받는 경로까지 경고가 사라진다고 보장할 수는 없습니다.** [Microsoft 배포 경로별 비교](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options)
+
+직접 EXE 배포를 유지한다면 모든 실행 파일·제거기·설치기를 동일한 게시자 명의로 서명하고 타임스탬프를 추가합니다. 최종 GitHub 배포 URL에서 새 Windows 환경의 브라우저로 실제 다운로드해 SmartScreen·게시자·설치·첫 실행을 확인해야 합니다. 로컬 빌드 폴더에서 EXE 실행 성공이나 서명 검사 통과만으로 다운로드 경고가 없다고 판정하지 않습니다.
 
 ## 비용과 이용 조건
 
@@ -54,4 +70,4 @@ Pointory의 MIT 라이선스·공개 소스·문서·릴리스는 신청 기반�
 
 Microsoft Store의 **MSIX 제출**은 Microsoft가 서명합니다. **EXE/MSI 등록**은 개발자가 설치기와 내부 PE를 직접 서명해야 하며, 버전별 HTTPS URL·무인 설치·설치 중 다운로드 없는 설치기가 요구됩니다. 현재 Pointory는 NSIS와 WebView2 `downloadBootstrapper` 설정이므로 스토어 전용 패키징이 필요합니다. [EXE/MSI 요구 사항](https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msi/app-package-requirements)
 
-따라서 순서는 **배포 명의 결정 → 직접 배포 서명·공증 완료 → 새 PC/Mac 다운로드·실행 확인 → 스토어용 패키징과 심사**를 권장합니다. 서명된 공개 릴리스의 준비가 끝나기 전에는 현장 미리보기를 정식 신뢰 배포물로 표시하지 않습니다.
+Windows의 경고 없는 설치 목표에는 **배포 명의 결정 → Store용 패키징·기능 검증 → 심사 → 새 PC에서 실제 Store 설치 확인**을 우선합니다. 직접 EXE 배포를 병행한다면 별도로 서명·타임스탬프·웹 다운로드 검증을 진행하고 초기 SmartScreen 경고 가능성을 남겨 둡니다. Mac은 Developer ID 서명·공증과 새 Mac에서 다운로드·실행 확인을 진행합니다. 현재 현장 미리보기는 정식 신뢰 배포물로 표시하지 않습니다.
