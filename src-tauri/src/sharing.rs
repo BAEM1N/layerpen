@@ -129,6 +129,10 @@ pub async fn share_live(app:tauri::AppHandle,enabled:bool)->Result<()> {
   let live=Arc::new(Live::default());let image=xcap::image::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../Wiki/assets/pointory-overview.jpg")).unwrap().to_rgb8();
   let mut bytes=vec![];xcap::image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes,70).encode_image(&image).unwrap();*live.frame.lock().unwrap()=bytes;live.enabled.store(true,Ordering::SeqCst);
   let files=Arc::new(Mutex::new(BTreeMap::new()));let path=std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../README.md");files.lock().unwrap().insert("sample".into(),Item{id:"sample".into(),name:"Pointory-example-readme.md".into(),size:path.metadata().unwrap().len(),path});
-  let server=start(Ipv4Addr::LOCALHOST,0,files,live).unwrap();println!("BROWSER_FIXTURE_URL={}",server.url);std::thread::sleep(Duration::from_secs(300));
+  // Explicitly opt into a private LAN bind for a cross-device fixture. The
+  // production server's address validation still rejects public interfaces.
+  let bind=std::env::var("POINTORY_FIXTURE_BIND").map(|value|value.parse::<Ipv4Addr>().expect("Invalid fixture IPv4 address")).unwrap_or(Ipv4Addr::LOCALHOST);
+  let seconds=std::env::var("POINTORY_FIXTURE_SECONDS").ok().and_then(|value|value.parse::<u64>().ok()).unwrap_or(300).clamp(5,300);
+  let server=start(bind,0,files,live).unwrap();println!("BROWSER_FIXTURE_URL={}",server.url);std::thread::sleep(Duration::from_secs(seconds));
  }
 }
