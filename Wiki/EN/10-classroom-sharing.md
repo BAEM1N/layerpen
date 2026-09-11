@@ -10,9 +10,9 @@
 
 1. Open **Share materials** in Pointory settings.
 2. Click **Add files** and choose PDFs, slides, documents, or exported PNGs. Only selected files are listed; no directory is published. Up to 100 files are supported and duplicate paths are skipped.
-3. Check the detected IPv4 address belongs to the classroom Wi-Fi or Ethernet network. If it belongs to a VPN, enter the correct local IPv4 address.
+3. Choose an IPv4 address that students can reach on the instructor PC's sharing port and that school or organization policy permits. Use the Wi-Fi, Ethernet, or VPN address matching that route. A VPN is usable when device-to-device TCP access and policy requirements are satisfied.
 4. Click **Start sharing**. The app selects an available port and displays a URL and QR code.
-5. Copy the URL or show the QR. Students use a browser on the same network; no app or account is required.
+5. Copy the URL or show the QR. Students use a browser on a classroom network that can reach the instructor PC; no app or account is required.
 
 Anyone with the URL can download. HTTP is unencrypted; use a trusted classroom network. Removing a file revokes subsequent access, but cannot recover copies already downloaded. Moving or deleting the selected original makes it unavailable. Editing the original changes what is downloaded.
 
@@ -29,7 +29,7 @@ The entire selected monitor is captured, including ink, toolbar, open windows, a
 
 ## Student steps
 
-1. Join the instructor's network.
+1. Join a school-approved classroom network or VPN that can reach the instructor PC.
 2. Scan the QR or open the full `http://IPv4:port/random-path/` URL. Keep the random path.
 3. Click a material's filename to download directly from the instructor PC. Inline PDF preview is not implemented.
 4. The live area updates when enabled by the instructor. Use **Refresh** to update the material list.
@@ -39,6 +39,15 @@ The entire selected monitor is captured, including ink, toolbar, open windows, a
 - **Stop sharing** or quitting Pointory stops the server and live view. Closing only the panel keeps sharing on.
 - Restarting sharing rotates the random URL and may change the port. Send students the new address. The file list lasts only for the current app session.
 - Allow Pointory through the Windows firewall on the required private network. The app does not change firewall rules or configure router port forwarding.
-- Guest/school Wi-Fi client isolation, VLAN separation, VPNs, and the wrong IPv4 address can block access. Ask the network administrator whether device-to-device traffic is allowed.
+- Guest/school Wi-Fi client isolation, routing or policies between VLANs, VPN restrictions on device-to-device traffic, and the wrong IPv4 address can block access. Ask the network administrator whether TCP connections from **student devices to the instructor PC's sharing port** are allowed. A successful SSH connection from the instructor PC to another device does not establish HTTP connectivity in the reverse direction.
 - Private/link-local IPv4 networks are the target. Internet hosting, IPv6, HTTPS, uploads, and account management are not included.
-- If live view stays unavailable, check the instructor panel's error, screen capture permissions, and selected monitor. Native macOS/Linux sharing, cross-device classroom connectivity, and classroom-scale load testing remain unverified.
+- If live view stays unavailable, check the instructor panel's error, screen capture permissions, and selected monitor. Native macOS/Linux desktop sharing, direct classroom connectivity, and classroom-scale load testing remain unverified.
+
+## Verified connection scope
+
+On 2026-09-11, a Mac headless browser downloaded files and displayed changing
+synthetic frames from the real Windows sharing server through a temporary SSH
+forwarding route. Direct HTTP requests from the Mac to the Windows VPN address
+timed out; the cause remains undetermined. This did not test actual desktop
+capture, a logged-in Mac GUI, or successful direct classroom connectivity.
+See the [validation results and limits (Korean)](../../docs/validation/0.2-windows-share-mac.ko.md).

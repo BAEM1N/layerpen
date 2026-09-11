@@ -124,15 +124,50 @@ pub async fn share_live(app:tauri::AppHandle,enabled:bool)->Result<()> {
  #[test] fn shares_only_selected_files_and_revokes_access(){let dir=std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());std::fs::create_dir(&dir).unwrap();let path=dir.join("lesson.txt");std::fs::write(&path,"lesson contents").unwrap();let files=Arc::new(Mutex::new(BTreeMap::new()));files.lock().unwrap().insert("abc".into(),Item{id:"abc".into(),name:"<lesson>.txt".into(),size:15,path});let server=start(Ipv4Addr::LOCALHOST,0,files.clone(),Arc::new(Live::default())).unwrap();let url=server.url.clone();assert!(get(&url,None,None).contains("&lt;lesson&gt;.txt"));assert!(get(&url,Some("/"),None).starts_with("HTTP/1.1 404"));assert!(get(&url,None,Some("evil.example")).starts_with("HTTP/1.1 403"));assert!(get(&(url.clone()+"file/abc"),None,None).contains("lesson contents"));assert!(get(&(url.clone()+"file/../lesson.txt"),None,None).starts_with("HTTP/1.1 404"));files.lock().unwrap().clear();assert!(get(&(url.clone()+"file/abc"),None,None).starts_with("HTTP/1.1 404"));let addr=url.strip_prefix("http://").unwrap().split('/').next().unwrap().to_string();drop(server);assert!(TcpStream::connect(addr).is_err());std::fs::remove_dir_all(dir).unwrap();}
  #[test] fn rejects_public_bind(){assert!(!allowed("8.8.8.8".parse().unwrap()));assert!(allowed("192.168.1.2".parse().unwrap()));}
  #[test] fn live_frame_is_revoked_when_stopped(){let live=Arc::new(Live::default());live.enabled.store(true,Ordering::SeqCst);*live.frame.lock().unwrap()=b"test-frame".to_vec();let server=start(Ipv4Addr::LOCALHOST,0,Arc::new(Mutex::new(BTreeMap::new())),live.clone()).unwrap();let url=server.url.clone()+"live.jpg";assert!(get(&url,None,None).contains("test-frame"));live.stop();assert!(get(&url,None,None).starts_with("HTTP/1.1 404"));}
+ fn synthetic_fixture_frame(index:u32)->Vec<u8>{
+  // Entirely authored RGB pixels: a moving stripe and binary frame counter.
+  // No monitor, window, screenshot, or external image is read by this path.
+  let stripe=(index%640)*37%640;
+  let image=xcap::image::RgbImage::from_fn(640,360,|x,y|{
+   let pixel=if y<40 {
+    if (index>>(x/40))&1==1 {[240,192,64]}else{[32,48,80]}
+   }else if (x+640-stripe)%640<48 {[72,216,168]}
+   else if (x/40+y/40)%2==0 {[40,72,120]}else{[28,48,88]};
+   xcap::image::Rgb(pixel)
+  });
+  let mut bytes=vec![];xcap::image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes,70).encode_image(&image).unwrap();bytes
+ }
+ #[test] fn synthetic_fixture_frames_decode_and_change(){
+  let first=synthetic_fixture_frame(0);let next=synthetic_fixture_frame(1);
+  let first_image=xcap::image::load_from_memory(&first).unwrap().to_rgb8();
+  let next_image=xcap::image::load_from_memory(&next).unwrap().to_rgb8();
+  assert_eq!(first_image.dimensions(),(640,360));assert_eq!(next_image.dimensions(),(640,360));
+  assert_ne!(first_image.as_raw(),next_image.as_raw());
+  assert_eq!(first,synthetic_fixture_frame(0));
+ }
  #[test] #[ignore = "Manual browser fixture; no desktop capture"]
  fn browser_fixture(){
-  let live=Arc::new(Live::default());let image=xcap::image::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../Wiki/assets/pointory-overview.jpg")).unwrap().to_rgb8();
-  let mut bytes=vec![];xcap::image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes,70).encode_image(&image).unwrap();*live.frame.lock().unwrap()=bytes;live.enabled.store(true,Ordering::SeqCst);
+  let dynamic=std::env::var("POINTORY_FIXTURE_DYNAMIC").as_deref()==Ok("1");
+  let live=Arc::new(Live::default());
+  let bytes=if dynamic {synthetic_fixture_frame(0)}else{
+   let image=xcap::image::open(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../Wiki/assets/pointory-overview.jpg")).unwrap().to_rgb8();
+   let mut bytes=vec![];xcap::image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes,70).encode_image(&image).unwrap();bytes
+  };
+  *live.frame.lock().unwrap()=bytes;live.enabled.store(true,Ordering::SeqCst);
   let files=Arc::new(Mutex::new(BTreeMap::new()));let path=std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../README.md");files.lock().unwrap().insert("sample".into(),Item{id:"sample".into(),name:"Pointory-example-readme.md".into(),size:path.metadata().unwrap().len(),path});
   // Explicitly opt into a private LAN bind for a cross-device fixture. The
   // production server's address validation still rejects public interfaces.
   let bind=std::env::var("POINTORY_FIXTURE_BIND").map(|value|value.parse::<Ipv4Addr>().expect("Invalid fixture IPv4 address")).unwrap_or(Ipv4Addr::LOCALHOST);
+  let port=std::env::var("POINTORY_FIXTURE_PORT").map(|value|value.parse::<u16>().expect("Invalid fixture port")).unwrap_or(0);
   let seconds=std::env::var("POINTORY_FIXTURE_SECONDS").ok().and_then(|value|value.parse::<u64>().ok()).unwrap_or(300).clamp(5,300);
-  let server=start(bind,0,files,live).unwrap();println!("BROWSER_FIXTURE_URL={}",server.url);std::thread::sleep(Duration::from_secs(seconds));
+  let server=start(bind,port,files,live.clone()).unwrap();println!("BROWSER_FIXTURE_URL={}",server.url);
+  let started=std::time::Instant::now();
+  if dynamic {
+   for frame in 1..seconds*2 {
+    std::thread::sleep((started+Duration::from_millis(frame*500)).saturating_duration_since(std::time::Instant::now()));
+    *live.frame.lock().unwrap()=synthetic_fixture_frame(frame as u32);
+   }
+  }
+  std::thread::sleep((started+Duration::from_secs(seconds)).saturating_duration_since(std::time::Instant::now()));
  }
 }
